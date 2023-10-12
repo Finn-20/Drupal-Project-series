@@ -1,0 +1,82 @@
+<?php
+
+use Drupal\Component\Render\HtmlEscapedText;
+use Drupal\Core\Url;
+use Drupal\user\Entity\User;
+use \Drupal\node\Entity\Node;
+use Drupal\simple_popup_blocks\SimplePopupBlocksStorage;
+
+/**
+ * Implements hook_theme().
+ */
+function ai_popup_introduction_theme() {
+  return [
+    'homepage_video_display' => [
+      'variables' => [
+        'title' => NULL,
+        'video' => NULL],
+    ],
+    'homepage_video_banner_display' => [
+      'variables' => [
+        'banner' => NULL
+      ],
+    ],
+	'video-carousel-display' => [
+      'variables' => [
+        'video' => NULL 
+      ],
+    ],
+  ];
+}
+
+function ai_popup_introduction_page_attachments(array &$attachments) {
+	// 1. check user already visited the video
+    $display_popup = true;
+    $user = \Drupal::currentUser();
+    $userquery = \Drupal::database()->select('node_field_data', 'n')
+      ->fields('n', ['nid'])
+      ->condition('n.status', 1)
+      ->condition('n.type', 'user_video_details')
+      ->condition('unid.field_user_id_value', $user->id());
+    $userquery->join('node__field_user_id', 'unid', 'unid.entity_id = n.nid');
+    $user_details = $userquery->execute()->fetchAll();
+    // 2. if so check all conditions
+    if (!empty($user_details)) {
+      // 2.1 if user video visit status is completed den dont show popup
+      $node = Node::load($user_details[0]->nid);
+      if ($node->get('field_video_status')->getValue()[0]['value'] == '1') {
+        $display_popup = false;
+      }
+      else if (isset($_COOKIE["ai_introduction_video"]) && ($_COOKIE["ai_introduction_video"] == $user->id())) {
+        // 2.2 if vidoe status is incomplete and cooki values is not expired den dont show popup to user
+        $display_popup = false;
+      }
+    }
+	
+	// Display the video popup only, if the display popup value is true.
+	if($display_popup){
+		$popup_settings = [];
+		foreach (SimplePopupBlocksStorage::loadAll() as $entry) {
+			if ($entry->status == 1) {
+				if ($entry->type == 0) {
+					$identifier = preg_replace('/[_]+/', '-', $entry->identifier);
+					$entry->identifier = 'block-' . $identifier;
+				}
+				/*
+				$visit_counts = unserialize($entry->visit_counts);
+				$entry->visit_counts = implode(",", $visit_counts);
+				*/
+				// Sanitize each entry.
+				$popup_settings = array_map('Drupal\Component\Utility\SafeMarkup::checkPlain', (array) $entry);
+			}
+			$url = Url::fromRoute('ai_popup_introduction.watch_later_url');
+			$popup_settings['callbackUrl'] = $url->toString();
+			$popup_settings['display_popup'] = $display_popup;
+
+      $attachments['#attached']['library'][] = 'ai_popup_introduction/ai_popup_introduction.css';
+      $attachments['#attached']['library'][] = 'ai_popup_introduction/ai_popup_introduction.js';
+      $attachments['#attached']['library'][] = 'ai_popup_introduction/ai_popup_introduction.duration';
+			$attachments['#attached']['drupalSettings']['ai_popup_video_settings'] = $popup_settings;
+		}
+	}
+}

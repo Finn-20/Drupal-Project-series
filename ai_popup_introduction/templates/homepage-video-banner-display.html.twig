@@ -1,0 +1,17 @@
+<div{{ attributes.addClass(classes) }}>
+  {% block banner %}
+    <div class="banner-wrapper videobox">
+      <div class="banner">				
+		  {{ banner.slider_content }}	 
+	   </div>
+      <div class="banner-title-text-wrapper">
+        <div class="title"><h2{{ title_attributes }}>{{ banner.label }}</h2></div> 
+        <div class="content">
+          <div class="block-content-wrapper">          
+            {{ banner.body|raw }}
+          </div>
+        </div>        
+      </div>
+    </div>
+  {% endblock %} 
+</div>                        

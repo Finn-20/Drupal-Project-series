@@ -1,0 +1,6 @@
+name: AI Related Content
+description: Gives a block of related content based on taxonomy terms.
+package: Custom
+type: module
+version: 8.x-1.0
+core: 8.x

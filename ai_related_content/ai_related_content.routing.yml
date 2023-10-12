@@ -1,0 +1,7 @@
+ai_related.site_matrix_config:
+  path: '/admin/config/content/ai_utility/site-stats/site-matrix-setings'
+  defaults:
+    _form: '\Drupal\ai_related_content\Form\SiteMatricConfigForm'
+    _title: 'Site Matrix configuration'
+  requirements:
+    _permission: 'administer site configuration'

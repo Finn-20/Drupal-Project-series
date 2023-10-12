@@ -1,0 +1,6 @@
+name: AI Search
+description: For AI Search.
+package: Custom
+type: module
+core_version_requirement: ^8 || ^9
+core: 8.x

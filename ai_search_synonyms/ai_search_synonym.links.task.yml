@@ -1,0 +1,4 @@
+ai_search_synonyms.import_synonym:
+  title: Import Synonyms (API)
+  route_name: ai_search_synonyms.import_synonyms
+  base_route: entity.search_api_synonym.collection

@@ -1,0 +1,71 @@
+<?php
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\Entity\Node;
+use Drupal\user\Entity\User;
+use Drupal\Core\Render\Element;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\editor\Entity\Editor;
+use Drupal\taxonomy\Entity\Term;
+use Drupal\paragraphs\Entity\Paragraph;
+ 
+
+function ai_select_or_other_field_terms_form_alter(array &$form, FormStateInterface $form_state, $form_id) { 
+	if ($form_id == 'node_use_case_or_accelerator_form' || $form_id == 'node_use_case_or_accelerator_edit_form'){
+      $fields_names = ['field_usecase_aifeatures', 'field_usecase_framework', 'field_usecase_technology'];
+      foreach ($fields_names as $field) {
+      $options = [];
+      $category_fields = !empty(
+          $form['field_use_case_or_accelerator_de']['widget'][0]['subform'][$field]['widget']['#options']) ?
+        $form['field_use_case_or_accelerator_de']['widget'][0]['subform'][$field]['widget']['#options'] : NULL;
+      $default_value = !empty(
+          $form['field_use_case_or_accelerator_de']['widget'][0]['subform'][$field]['widget']['#default_value']) ?
+        $form['field_use_case_or_accelerator_de']['widget'][0]['subform'][$field]['widget']['#default_value'] : NULL;
+      if (!empty($category_fields)) {
+        foreach ($category_fields as $key => $value) {
+          $start = strrpos($key, '(');
+          $tid = substr($key, $start + 1, strlen($key) - $start - 2);
+          // Loading terms
+          $taxonomy_term = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($tid);
+          $status = $taxonomy_term->get('field_term_status')->value;
+          $is_default_value = in_array($key, $default_value);
+          // status is 1
+          if ($status || $is_default_value) {
+            $options[$key] = $value;
+          }
+        }
+      }
+      $form['field_use_case_or_accelerator_de']['widget'][0]['subform'][$field]['widget']['#options'] = $options;
+    }
+  }
+}
+/**
+ * Implements hook_entity_presave().
+ */
+function ai_select_or_other_field_terms_entity_presave(EntityInterface $entity) {
+  // Check if it is Use case or accelerator content only.
+  if ($entity->bundle() == 'use_case_or_accelerator') { 
+    // Get moderation state and checklist submitted values
+    $moderation_state = $entity->get('moderation_state')->getString();
+    if ($moderation_state == 'published') {
+      $fields_names = ['field_usecase_aifeatures', 'field_usecase_framework', 'field_usecase_technology'];
+      $para   = $entity->get('field_use_case_or_accelerator_de')->getValue();
+      if (isset($para[0]['subform']) && !empty($para[0]['subform'])) {
+        $para_val = $para[0]['subform'];
+        foreach($fields_names as $field) {
+          foreach ($para_val[$field] as $field_val) {
+            if (isset($field_val['target_id']) && !empty($field_val['target_id'])) {
+              $tid = $field_val['target_id'];
+              $taxonomy_term = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($tid);
+              $status = $taxonomy_term->get('field_term_status')->value;
+              if (!$status){
+                $taxonomy_term->field_term_status->setValue(1);
+              }
+              $taxonomy_term->Save();
+            }
+          }
+        }  
+      }
+      
+    }
+  }
+}

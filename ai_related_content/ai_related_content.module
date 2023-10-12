@@ -1,0 +1,23 @@
+<?php
+
+/**
+ * Implements hook_theme().
+ */
+function ai_related_content_theme() {
+  return [
+    'ai_related_content_block' => [
+      'variables' => [
+        'related_usecases' => [],
+      ],
+      'template' => 'block--ai-related-content-block',
+    ],
+    'site_matrix_data' => [
+      'variables' => [
+        'google' => NULL,
+        'asset' => NULL,
+        'livedemo' => NULL,
+        'stakeholderconnect' => NULL,
+      ],
+    ],
+  ];
+}

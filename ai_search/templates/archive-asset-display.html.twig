@@ -1,0 +1,9 @@
+<div{{ attributes.addClass(classes) }}>
+  <div class='block-content-wrapper'>
+    <div id="{{ blk_id }}">
+      <input type='hidden' name="archive_current_path" id='archive_current_path' value="{{ asset_path }}">
+      <input type='checkbox' name="asset-state-archive" {{ checked_status }} id="asset-state-archive">
+      <label>Include Archived Assets</label>
+    </div>
+  </div>
+</div>

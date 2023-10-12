@@ -1,0 +1,22 @@
+ai_popup_introduction.css:
+  css:
+    theme:
+      css/ai_popup_introduction.css: {}
+ai_popup_introduction.js:
+  js:
+    js/ai_popup_introduction.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupal.dialog.ajax
+    - core/drupalSettings
+
+ai_popup_introduction.duration:
+  js:
+    js/ai_popup_video_duration.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+    - core/drupal.dialog.ajax
+    - core/jquery.once

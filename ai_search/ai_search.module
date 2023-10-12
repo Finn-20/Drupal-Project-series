@@ -1,0 +1,226 @@
+<?php
+
+/**
+ * @file
+ * Views form and views alter for search results.
+ */
+
+use Drupal\views\ViewExecutable;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\Entity\Node;
+use Drupal\views\Plugin\views\query\QueryPluginBase;
+use Drupal\views\Plugin\views\query;
+use Drupal\user\Entity\User;
+
+/**
+ * Implements hook_views_pre_render().
+ */
+function ai_search_views_pre_render(ViewExecutable $view) {
+  if (isset($view)) {
+    if (in_array(
+                  $view->storage->id(),
+                  ['search_content',
+                    'ai_experience_zone',
+                  ])) {
+      $view->element['#attached']['library'][] = 'ai_search/ai_search_library';
+    }
+    elseif (in_array($view->storage->id(), ['ai_experience_2_0',
+      'search_explore_details',
+    ])) {
+      $view->element['#attached']['library'][] = 'ai_search/ai_search_library_2_0';
+    }
+  }
+  return $view;
+}
+
+/**
+ * Implements hook_js_alter().
+ */
+function ai_search_js_alter(&$javascript) {
+  if (!empty($javascript['modules/contrib/facets/js/facets-views-ajax.js'])) {
+    $javascript['modules/contrib/facets/js/facets-views-ajax.js']['data'] = drupal_get_path('module', 'ai_search') . '/assets/js/facets-views-ajax.js';
+    $javascript['modules/contrib/facets/js/facets-views-ajax.js']['scope'] = 'footer';
+    $javascript['modules/contrib/facets/js/facets-views-ajax.js']['weight'] = 0.001;
+    $javascript['modules/contrib/facets/js/facets-views-ajax.js']['group'] = JS_LIBRARY;
+    $javascript['modules/contrib/facets/js/facets-views-ajax.js']['type'] = 'file';
+    $javascript['modules/contrib/facets/js/facets-views-ajax.js']['browsers'] = [];
+    $javascript['modules/contrib/facets/js/facets-views-ajax.js']['version'] = -1;
+    $javascript['modules/contrib/facets/js/facets-views-ajax.js']['preprocessed'] = 1;
+    $javascript['modules/contrib/facets/js/facets-views-ajax.js']['attributes']['src'] = NULL;
+  }
+}
+
+/**
+ * Implements hook_form_views_exposed_form_alter().
+ */
+function ai_search_form_views_exposed_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+  if ($form['#id'] == 'views-exposed-form-ai-experience-zone-page-1') {
+    if (isset($form['#info']) && !empty($form['#info'])) {
+      foreach ($form['#info'] as $info) {
+        if (isset($form[$info['value']]['#options']) && !empty($form[$info['value']]['#options'])) {
+          //$options = [];
+          foreach ($form[$info['value']]['#options'] as $tid => $name) {
+            $term = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($tid);
+            $facet_filter_value = $term->get('field_hide_in_facets_filter')->getValue();
+            if (isset($facet_filter_value[0]['value']) && !empty($facet_filter_value[0]['value'])) {
+              $hide_in_facet = $term->get('field_hide_in_facets_filter')->getValue()[0]['value'];
+              if (isset($hide_in_facet) && !empty($hide_in_facet) && $hide_in_facet) {
+                unset($form[$info['value']]['#options'][$tid]);
+              }
+              elseif (substr($name, 0, 1) === '-') {
+                $form[$info['value']]['#options'][$tid] = str_replace('-', ' - ', $name);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_preprocess_views_view_field().
+ */
+function ai_search_preprocess_views_view_field(&$vars) {
+  if (isset($vars['view']) && ($vars['view']->id() == 'ai_partners')) {
+    if (isset($vars['field']->field) && !empty($vars['field']->field) && $vars['field']->field == 'parent_id') {
+      $nid = $vars['field']->getValue($vars['row']);
+      if (isset($nid) && !empty($nid)) {
+        $entity_type = 'node';
+        $view_mode = 'search_result';
+        $output = '';
+        $node = \Drupal::entityTypeManager()->getStorage($entity_type)->load($nid);
+
+        if (NULL !== $node && $node instanceof Node) {
+
+          if ($node->bundle() == 'use_case_or_accelerator') {
+            $featured = $node->get('field_featured_usecase')->value;
+            if ($featured) {
+              $output = render(\Drupal::entityTypeManager()->getViewBuilder($entity_type)->view($node, $view_mode));
+            }
+          }
+        }
+        $vars['output'] = [
+          '#markup' => $output,
+        ];
+      }
+
+    }
+  }
+}
+
+/**
+ * Implements hook_search_api_query_alter().
+ */
+
+function ai_search_search_api_query_alter(\Drupal\search_api\Query\QueryInterface &$query) {
+  // Get current user and get his profile visible category.
+  $fields = $query->getIndex()->getFields();
+  //ksm($fields);
+  $current_user = \Drupal::currentUser();
+  $uid = $current_user->id();
+  $user = User::load($uid);
+  $id = $user->get('field_visible')->getValue();
+  if (!empty($id[0]["target_id"])) {
+    $target_id_0 = $id[0]["target_id"];
+    $conditions = &$query->getConditionGroup()->getConditions();
+    $group = &$query->getConditionGroup();
+    $group->addCondition('field_visible_content', $target_id_0, '=');
+  }
+}
+
+function ai_search_views_query_alter(ViewExecutable $view, QueryPluginBase $query) {
+
+  if ($view->id() == 'search_explore_details') {
+    // Get current user and get his profile visible category.
+    $current_user = \Drupal::currentUser();
+    $uid = $current_user->id();
+    $user = User::load($uid);
+    $user_data = $user->get('field_visible')->getValue();
+    $user_category = $user_data[0]["target_id"];
+
+    foreach($query->where[0] as &$condition_group) {
+      foreach ($condition_group as &$condition) {
+        // Industries.
+        if ($condition['field'] == 'field_usecase_industry_taxonomy_term_field_data__node__field_visible_content.field_visible_content_target_id IN(:node__field_visible_content_field_visible_content_target_id[])') {
+          $condition = [
+            'field' => 'field_usecase_industry_taxonomy_term_field_data__node__field_visible_content.field_visible_content_target_id',
+            'value' => $user_category,
+            'operator' => 'IN',
+          ];
+        }
+        // Domain.
+         if ($condition['field'] == 'field_usecase_domain_taxonomy_term_field_data__node__field_visible_content.field_visible_content_target_id IN(:node__field_visible_content_field_visible_content_target_id[])') {
+          $condition = [
+            'field' => 'field_usecase_domain_taxonomy_term_field_data__node__field_visible_content.field_visible_content_target_id',
+            'value' => $user_category,
+            'operator' => 'IN',
+          ];
+        }
+        // Offer.
+         if ($condition['field'] == 'field_offer_taxonomy_term_field_data__node__field_visible_content.field_visible_content_target_id IN(:node__field_visible_content_field_visible_content_target_id[])') {
+          $condition = [
+            'field' => 'field_offer_taxonomy_term_field_data__node__field_visible_content.field_visible_content_target_id',
+            'value' => $user_category,
+            'operator' => 'IN',
+          ];
+        }
+      }
+    }
+  }
+
+  // To handle the archive content for the search related pages.
+  if ($view->id() == 'search_content_2_0') {
+    foreach ($query->getWhere() as &$condition_group) {
+      foreach ($condition_group['conditions'] as &$condition) {
+        if ($condition[0] == 'moderation_state') {
+          $query_string = \Drupal::request()->query->get('f');
+          if (!empty($query_string)) {
+            $implode_query_string = implode('|', $query_string);
+            if (preg_match("/asset_state:archived/i", $implode_query_string)) {
+              $condition = [
+                'moderation_state',
+                array('published', 'archived'),
+                'IN',
+              ];
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // To handle the archive content for the ai_experince related pages.
+  if ($view->id() == 'ai_experience_2_0') {
+    foreach ($query->where as &$condition_group) {
+      foreach ($condition_group['conditions'] as &$condition) {
+        if ($condition['field'] == 'node_field_data.moderation_state') {
+          $query_string = \Drupal::request()->query->get('f');
+          if (!empty($query_string)) {
+            $implode_query_string = implode('|', $query_string);
+            if (preg_match("/asset_state:archived/i", $implode_query_string)) {
+              $condition = [
+                'field' => 'node_field_data.moderation_state',
+                'value' => ['published', 'archived'],
+                'operator' => 'IN',
+              ];
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+
+/**
+ * Implements hook_theme().
+ */
+function ai_search_theme() {
+  return [
+    'archive_asset_display' => [
+      'variables' => [
+        'blk_id'=> NULL,'asset_path' => NULL, 'checked_status' => NULL],
+    ],
+  ];
+}

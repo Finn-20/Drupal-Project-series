@@ -1,0 +1,15 @@
+ai_popup_introduction.watch_later_url:
+  path: "/introduction-video/watch-later"
+  defaults:
+    _controller: '\Drupal\ai_popup_introduction\Controller\IntroductionController::ai_video_watch_later'
+    _title: "Watch Later Video"
+  requirements:
+    _permission: 'access content'
+    
+ai_popup_introduction.watch_later_url.video_carousel_popup:
+  path: '/banner-video-carousel/{id}'
+  defaults: 
+    _title: 'Modal Form'
+    _controller: '\Drupal\ai_popup_introduction\Controller\HomeVideoCarouselController::videoCarouselPopup'
+  requirements:
+    _permission: 'access content'

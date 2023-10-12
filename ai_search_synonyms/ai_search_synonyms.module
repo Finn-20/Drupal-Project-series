@@ -1,0 +1,139 @@
+<?php
+use Drupal\search_api_synonym\Entity\Synonym;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\node\Entity\Node;
+use Drupal\search_api\Query\QueryInterface;
+use Drupal\Component\Serialization\Json;
+use GuzzleHttp\Exception\RequestException;
+
+/**
+ * Implements hook_entity_presave().
+ */
+function ai_search_synonyms_entity_presave(EntityInterface $entity) {
+  // Check if it is Use case or accelerator content only.
+  if ($entity->bundle() == 'use_case_or_accelerator') {
+    //Get Synonyms Entity List
+    $synonyms = Synonym::loadMultiple();
+    $synonyms_list = [];
+    foreach($synonyms as $synonym) {
+      $synonyms_list[$synonym->get('sid')->value] = explode(',', $synonym->get('word')->value . ',' . $synonym->get('synonyms')->value);
+    }
+    $sids = [];
+    foreach ($synonyms_list as $synonym_id => $synonym_values) {
+      //check in Title
+      if (_ai_search_synonyms_check_if_synoyms_exists($synonym_values, $entity->get('title')->value)) {
+        $sids[$synonym_id] = $synonym_id;
+      }
+      //Check in Business Driver
+      else if (_ai_search_synonyms_check_if_synoyms_exists($synonym_values, check_markup($entity->get('body')->value))) {
+        $sids[$synonym_id] = $synonym_id;
+      }
+      //Check in solution
+      else {
+        $solution = check_markup($entity->get('field_solution')->value);
+        if (_ai_search_synonyms_check_if_synoyms_exists($synonym_values, $solution)) {
+          $sids[$synonym_id] = $synonym_id;
+        }
+      }
+    }
+
+    if (isset($sids) && !empty($sids)) {
+      $entity->set('field_content_synonyms', $sids);
+    }
+  }
+}
+
+/**
+ * Check if defined synonyms exists in given  field.
+ */
+function _ai_search_synonyms_check_if_synoyms_exists($synonyms, $text_to_check) {
+  foreach ($synonyms as $word) {
+    if (stristr($text_to_check, $word)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Implements hook_cron().
+ *
+ * This is a cron job which works as a part of scheduled job ,
+ * this function will add synonyms to published content if any synonyms found in content.
+ */
+function ai_search_synonyms_cron() {
+  $values = ['type' => 'use_case_or_accelerator', 'status' => '1', 'moderation_state' => 'published'];
+  $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadByProperties($values);
+  
+  $synonyms = Synonym::loadMultiple();
+  $synonyms_list = [];
+  foreach($synonyms as $synonym) {
+    $synonyms_list[$synonym->get('sid')->value] = explode(',', $synonym->get('word')->value . ',' . $synonym->get('synonyms')->value);
+  }
+  $sids = [];
+  
+  foreach ($nodes as $node) {
+    $moderation_state = $node->get('moderation_state')->getString();
+    $content_synonyms = $node->get('field_content_synonyms')->getValue();
+    if ($moderation_state == 'published') {
+      foreach ($synonyms_list as $synonym_id => $synonym_values) {
+        //check in Title
+        if (_ai_search_synonyms_check_if_synoyms_exists($synonym_values, $node->get('title')->value)) {
+          $sids[$synonym_id] = $synonym_id;
+        }
+        //Check in Business Driver
+        else if (_ai_search_synonyms_check_if_synoyms_exists($synonym_values, check_markup($node->get('body')->value))) {
+          $sids[$synonym_id] = $synonym_id;
+        }
+        //Check in solution
+        else {
+          $solution = check_markup($node->get('field_solution')->value);
+          if (_ai_search_synonyms_check_if_synoyms_exists($synonym_values, $solution)) {
+            $sids[$synonym_id] = $synonym_id;
+          }
+        }
+      }
+
+      if (isset($sids) && !empty($sids)) {
+        $diff = array_diff($sids, $content_synonyms);
+        if (!empty($diff)) {
+          $node->set('field_content_synonyms', $sids);
+          $node->save();
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_search_api_query_alter().
+ */
+function ai_search_synonyms_search_api_query_alter(QueryInterface &$query) {
+  $new_keys = [];
+  $keys = $query->getKeys();
+  $new_keys['#conjunction'] = 'OR';
+  if (isset($keys['#conjunction']) && !empty($keys['#conjunction'])) {
+    $new_keys['#conjunction'] = $keys['#conjunction'];
+    unset($keys['#conjunction']);
+  }
+
+  if (is_array($keys)) {
+    foreach ($keys as $key) {
+      $new_keys[] = $key;
+      $synonyms = Synonym::loadMultiple();
+      $synonyms_list = [];
+      foreach ($synonyms as $synonym) {
+        $syn_arr = explode(',', $synonym->get('word')->value . ',' . $synonym->get('synonyms')->value);
+        if (in_array($key, $syn_arr)) {
+          foreach ($syn_arr as $syn) {
+            if (!in_array($syn, $new_keys)) {
+              $new_keys[] = $syn;
+            }
+          }
+        }
+      }
+    }
+
+    $query->keys($new_keys);
+  }
+}

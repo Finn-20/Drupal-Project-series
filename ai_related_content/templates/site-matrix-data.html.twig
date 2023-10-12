@@ -1,0 +1,50 @@
+{#
+/**
+ * @file
+ * AI Related site matrix data.
+ */
+#}
+<div class="col-sm-12 col-md-12">
+  <div class="content-wrapper">
+    <div class="row">
+      {% if google.footfall is not empty %}
+        <div class="col-md-3 col-sm-6 col-xs-12 metrix">
+          
+            <h2>{{ google.footfall|number_format(0, '', ',') }}<span class="go-arrow">⬆</span></h2>
+            <p>{{ google.footfall_text }}</p>
+        
+        </div>
+        <div class="col-md-2 col-sm-6 col-xs-6 metrix">
+         
+            <h2>{{ google.users|number_format(0, '', ',') }}<span class="go-arrow">⬆</span></h2>
+            <p>{{ google.users_text }}</p>
+         
+        </div>
+      {% endif %}
+      {% if asset.count is not empty %}
+        <div class="col-md-2 col-sm-6 col-xs-6 metrix">
+         
+            <h2>{{ asset.count|raw }}<span class="go-arrow">⬆</span></h2>
+            <p><a href='/ai-browse-all-search?sort_by=search_api_relevance' target="_blank"> {{ asset.asset_text }} </a></p>
+         
+        </div>
+      {% endif %}
+      {% if livedemo.count is not empty %}
+        <div class="col-md-2 col-sm-6 col-xs-6 metrix">
+          
+            <h2>{{ livedemo.count|raw }}<span class="go-plus">+</span></h2>
+            <p><a href='/ai_experience' target="_blank"> {{ livedemo.livedemo_text }} </a></p>
+            
+        </div>
+      {% endif %}
+      {% if stakeholderconnect.count is not empty %}
+        <div class="col-md-3 col-sm-12 col-xs-6 metrix">
+          
+            <h2>{{ stakeholderconnect.count|raw }}<span class="go-plus">+</span></h2>
+            <p>{{ stakeholderconnect.stakeholder_text }}</p>
+         
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</div>

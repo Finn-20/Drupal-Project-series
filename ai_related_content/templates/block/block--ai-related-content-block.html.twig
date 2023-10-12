@@ -1,0 +1,40 @@
+{#
+/**
+ * @file
+ * AI Related Content Block.
+ */
+#}
+{%
+  set classes = [
+    'block',
+    'block-' ~ configuration.provider|clean_class,
+    'block-' ~ plugin_id|clean_class,
+    'clearfix',
+  ]
+%}
+{% set related_usecases = content.related_usecases %}
+<section{{ attributes.addClass(classes) }}>
+  {{ title_prefix }}
+  {% if label %}
+    <h2{{ title_attributes.addClass('block-title') }}>{{ label }}</h2>
+  {% endif %}
+  {{ title_suffix }}
+
+  {% block content %}
+    <div class="ai_related_content--block view-content">
+      {% if related_usecases is not empty %}
+        {% for usecase in related_usecases %}
+          <div class="views-row">
+            <div class="views-field views-field-title">
+              <span class="field-content"><a href="{{ usecase.url }}" title="{{ usecase.link_title }}" target="_blank" hreflang="en">{{ usecase.title }}</a></span>
+            </div>
+            <div class="views-field views-field-field-solution">
+              <div class="field-content"><p>{{ usecase.solution|raw }}</p></div>
+            </div>
+          </div>        
+        {% endfor %}
+      {% endif %}
+   </div>
+  {% endblock %}
+</section>
+ 

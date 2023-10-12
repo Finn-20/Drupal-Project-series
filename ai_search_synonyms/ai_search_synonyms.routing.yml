@@ -1,0 +1,7 @@
+ai_search_synonyms.import_synonyms:
+  path: '/admin/config/search/search-api-synonyms/import-synonyms'
+  defaults:
+    _form: '\Drupal\ai_search_synonyms\Form\SynonymImportAPIForm'
+    _title: 'Import Synonyms'
+  requirements:
+    _permission: 'import search api synonyms'
