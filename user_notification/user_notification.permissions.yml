@@ -1,0 +1,5 @@
+view user notification:
+  title: 'View user notifications'
+administer contact entity:
+  title: 'Administer User notification'
+  restrict access: TRUE

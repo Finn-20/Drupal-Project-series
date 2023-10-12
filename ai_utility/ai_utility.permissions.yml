@@ -1,0 +1,8 @@
+view aig asset report:
+  title: View AIG Asset Report
+  description: Access AIG Asset Report.
+  restrict access: true
+view aig user report:
+  title: Access AIG User Report
+  description: Access AIG User Report.
+  restrict access: true

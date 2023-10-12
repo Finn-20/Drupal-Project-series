@@ -1,0 +1,10 @@
+services:
+  notification_message.manager:
+    class: Drupal\notification_message\NotificationMessageManager
+    arguments: [ "@entity_type.manager" ]
+
+  notification_message.event_subscriber:
+    class: Drupal\notification_message\EventSubscriber\NotificationMessageEventSubscriber
+    arguments: [ "@entity_type.manager", "@notification_message.manager" ]
+    tags:
+      - { name: event_subscriber }

@@ -1,0 +1,5 @@
+drupal.user_notification.toolbar:
+  version: VERSION
+  css:
+    theme:
+      css/user_notification.toolbar.css: {}

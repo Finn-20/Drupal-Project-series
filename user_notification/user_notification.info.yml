@@ -1,0 +1,8 @@
+name: User Notifications
+type: module
+description: 'Provides Notifications to defined users about CRUD Operation of Contents.'
+core: 8.x
+configure: user_notification.settings
+# core: 8.x
+dependencies:
+  - alert_events

@@ -1,0 +1,63 @@
+<?php
+
+/**
+ * @file
+ * This module holds functions for entity events.
+ */
+
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\alert_events\Event\EntityEvent;
+use Symfony\Component\EventDispatcher\Event;
+
+/**
+ * Implements hook_entity_insert().
+ *
+ * {@inheritdoc}
+ */
+function alert_events_entity_insert(EntityInterface $entity) {
+  $result = Drupal::service('user_notification.util')->setEntity($entity)->isValidContenttype();
+  if ($result) {
+    $event = new EntityEvent('event.insert', $entity);
+    _alert_events_dispatch('event.insert', $event);
+  }
+}
+
+/**
+ * Implements hook_entity_update().
+ *
+ * { @inheritdoc }
+ */
+function alert_events_entity_update(EntityInterface $entity) {
+  $result = Drupal::service('user_notification.util')->setEntity($entity)->isValidContenttype();
+  if ($result) {
+    $event = new EntityEvent('event.update', $entity);
+    _alert_events_dispatch('event.update', $event);
+  }
+}
+
+/**
+ * Implements hook_entity_delete().
+ *
+ * {@inheritdoc}
+ */
+function alert_events_entity_delete(EntityInterface $entity) {
+  $result = Drupal::service('user_notification.util')->setEntity($entity)->isValidContenttype();
+  if ($result) {
+    $event = new EntityEvent('event.delete', $entity);
+    _alert_events_dispatch('event.delete', $event);
+  }
+}
+
+/**
+ * Helper method to dispatch an event.
+ *
+ * @param string $event_type
+ *   The event type.
+ * @param \Symfony\Component\EventDispatcher\Event $event
+ *   The event to dispatch.
+ */
+function _alert_events_dispatch($event_type, Event $event) {
+  /** @var \Symfony\Component\EventDispatcher\EventDispatcher $dispatcher */
+  $dispatcher = \Drupal::service('event_dispatcher');
+  $dispatcher->dispatch($event_type, $event);
+}

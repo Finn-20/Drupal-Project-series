@@ -1,0 +1,7 @@
+{
+  "name": "drupal/user_notification",
+  "description": "Create content creation notification for users.",
+  "type": "drupal-module",
+  "homepage": "http://drupal.org/project/user_notification",
+  "license": "GPL-2.0+"
+}

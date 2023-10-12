@@ -1,0 +1,16 @@
+user_notification.alert:
+  path: '/content-alert'
+  defaults:
+    _title: 'Notification'
+    _controller: '\Drupal\user_notification\Controller\Alert::viewPopup'
+  requirements:
+    _permission: 'access content'
+
+user_notification.settings:
+  path: '/admin/config/user-notification/settings'
+  defaults:
+    _form: '\Drupal\user_notification\Form\AlertSettings'
+    _title: 'Notification Settings Form'
+    keys: NULL
+  requirements:
+    _permission: 'administer site configuration'

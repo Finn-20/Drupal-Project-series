@@ -1,0 +1,36 @@
+ai_utility.report.asset:
+  path: '/asset-tracker'
+  defaults:
+    _title: 'User Activity Report'
+  requirements:
+    _permission: 'access content'
+
+ai_utility.usecase_email_validate:
+  path: 'admin/config/content/ai_utility/email-settings/use-case-email-validate'
+  defaults:
+    _form: '\Drupal\ai_utility\Form\Settings\AIUtilityGeneralSettingForm'
+    _title: 'Usecase email validation'
+  requirements:
+    _permission: 'administer site configuration'
+
+ai_utility.email_debug_setting:
+  path: 'admin/config/content/ai_utility/email-settings/email-debug-mode'
+  defaults:
+    _form: '\Drupal\ai_utility\Form\Settings\AIGeneralEmailSettingConfigForm'
+    _title: 'Email debug settings'
+  requirements:
+    _permission: 'administer site configuration'
+ai_utility.usecase_processBulkMails:
+  path: '/usecase/process-bulk-mails'
+  defaults:
+    _controller: '\Drupal\ai_contribute_usecase\Controller\AssetMailNofiticationController::assetToProcess'
+  requirements:
+    _permission: 'administer site configuration'
+
+ai_utility.usecase_processBulkMails_settings:
+  path: 'admin/config/content/ai_utility/email-settings/bulk-email-settings'
+  defaults:
+    _form: '\Drupal\ai_contribute_usecase\Form\AIAssetBulkMailConfigForm'
+    _title: 'Bulk email settings'
+  requirements:
+    _permission: 'administer site configuration'

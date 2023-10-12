@@ -1,0 +1,5 @@
+user_notification.settings:
+  title: Content Alert Settings
+  description: 'Provides settings form to configure Content Alert notification'
+  route_name: user_notification.settings
+  parent: system.admin_config_system

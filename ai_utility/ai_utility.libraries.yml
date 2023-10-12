@@ -1,0 +1,3 @@
+value_map_library:
+  js:
+    js/value_map.js: {}

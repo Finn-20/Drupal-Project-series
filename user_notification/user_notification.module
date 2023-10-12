@@ -1,0 +1,203 @@
+<?php
+
+/**
+ * @file
+ * Used to notify users about modified content.
+ */
+
+use Drupal\Core\Url;
+use Drupal\comment\CommentInterface;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\user_notification\UserNotificationStorage;
+
+/**
+ * Implements hook_toolbar().
+ */
+function user_notification_toolbar() {
+  $items = [];
+
+  $items['alert'] = [
+    '#type' => 'toolbar_item',
+    '#weight' => 1000,
+    'tab' => [
+      '#type' => 'link',
+      '#title' => t('Notifications'),
+      '#url' => Url::fromRoute('user_notification.alert'),
+      '#attributes' => [
+        'title' => t('New content alerts'),
+        'class' => ['toolbar-icon', 'toolbar-icon-alert', 'use-ajax'],
+        'id' => ['drupal-off-canvas'],
+      ],
+    ],
+    '#wrapper_attributes' => [
+      'class' => ['user-notification-toolbar-tab'],
+    ],
+    '#attached' => [
+      'library' => [
+        'user_notification/drupal.user_notification.toolbar',
+        'core/drupal.dialog.ajax',
+      ],
+    ],
+  ];
+
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function user_notification_theme($existing, $type, $theme, $path) {
+  return [
+    'notification_view' => [
+      'variables' => ['notifications' => NULL,'notifications_push'=>NULL,'notifications_idea' => NULL,'notification_count' => NULL,
+        'notification_level' => NULL],
+    ],
+  ];
+}
+/**
+ * Notify user when comment is published.
+ */
+function user_notification_comment_publish($comment) {
+  _user_notification_published_notification($comment);
+}
+/**
+ * Implements hook_ENTITY_TYPE_update() for comment.
+ */
+function user_notification_comment_update(CommentInterface $comment) {
+  _user_notification_published_notification($comment);
+}
+/**
+ * Implements hook_comment_insert().
+ * 
+ */
+function user_notification_comment_insert(CommentInterface $comment) {
+  _user_notification_published_notification($comment);
+}
+
+/**
+* Create the notification when comment is published
+* Notify user when comment is published by super admin
+* automatically send notification to asset owner,primary,secondary and one who commented when admin replies or add comment to asset.
+*/
+function _user_notification_published_notification(CommentInterface $comment) {
+  // default status of notification is zero(0).
+  $status = 0; $created_date = 0; //$is_superadmin = false;
+  $update_user = $insert_user = $comment_notifications = [];
+ 
+  $current_usr_role = \Drupal::currentUser()->getRoles();
+  // 1. check user is super web admin
+  if(in_array('super_webadmin',$current_usr_role) || in_array('administrator',$current_usr_role)){
+    // 2. set the status of notification as 1.
+    $status = 1; 
+    $created_date = time();
+  }
+  $node = \Drupal::entityTypeManager()->getStorage('node')->load($comment->getCommentedEntityId());
+  $entity_type = $node->bundle();
+  $entity_id = $comment->getCommentedEntityId();
+  UserNotificationStorage::notification_default_user($update_user,$insert_user,'Comment',$entity_type,$entity_id);
+
+  // 3. Get commented user id
+  $uid = $comment->getOwnerId();
+  // 4. Check any entry to user notification table with uid, entity id, type and operation
+  $commented_user_exist = UserNotificationStorage::_is_user_notification_exist($uid,$entity_type,$entity_id,'Comment');
+  if($commented_user_exist){
+    $update_user[$commented_user_exist->id] = $commented_user_exist->id;
+  }else{
+    $insert_user[$uid] = $uid;
+  }
+  
+  // 4. Check any entry to user notification table with author,primary and secondary owner entity id, type and operation
+  UserNotificationStorage::node_author_pr_se_owner($node,'Comment',$update_user,$insert_user);
+
+  if(!empty($insert_user)) {
+    $uuid_service = \Drupal::service('uuid');
+    foreach ($insert_user as $key => $uid) {
+      $comment_notifications[] = [
+        'title' => $node->getTitle(),
+        'entity_id' => $entity_id,
+        'entity_type' => $entity_type,
+        'status' => $status,
+        'operation' => 'Comment',
+        'uid' => $uid,
+        'uuid' => $uuid_service->generate(),
+        'created' => $created_date
+      ]; 
+    }
+    UserNotificationStorage::bulkInsert($comment_notifications);
+  }
+  // bulk update the status and created date
+  if($update_user){
+    $update_fields = ['status' => $status,'created' => $created_date];
+    UserNotificationStorage::update($update_fields,$update_user);
+  }
+}
+
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Array $form
+ * \Drupal\Core\Form\FormStateInterface $form_state
+ *  unknown $form_id.
+ */
+function user_notification_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+  if ($form_id == 'views_form_comment_page_unapproved') {
+    $form['#submit'][] = 'user_notification_comment_form_submit';
+  }
+  if ($form_id == 'webform_submission_contact_add_form') {
+    
+    array_unshift($form['actions']['submit']['#submit'], 'user_notification_email_form_submit');
+  }
+}
+
+function user_notification_comment_form_submit(array &$form, FormStateInterface $form_state) {
+  
+    $operation = $form_state->getValue('operation');
+    if($operation == 'publish') {
+      $cids = $form_state->getValue('comments');
+      $comments = $this->commentStorage->loadMultiple($cids);
+      foreach ($comments as $comment) {
+        _user_notification_published_notification($comment);
+      }
+    }  
+}
+
+function user_notification_email_form_submit(array &$form, FormStateInterface $form_state) {
+  $entity_id = $form_state->getValue('ref_nid');
+  user_notification_all($entity_id,'Email');
+}
+function user_notification_all($entity_id,$operation) {
+  // default status of notification is zero(0).
+  $update_user = $insert_user = $all_notifications = [];
+  // 1. Load the node
+  $node = \Drupal::entityTypeManager()->getStorage('node')->load($entity_id);
+  $entity_type = $node->bundle();
+
+  UserNotificationStorage::notification_default_user($update_user,$insert_user,$operation,$entity_type,$entity_id);
+  // 2 Check any entry to user notification table with author,primary and secondary owner entity id, type and operation
+  UserNotificationStorage::node_author_pr_se_owner($node,$operation,$update_user,$insert_user);
+  
+  // bulk insert if user notification records
+  if(!empty($insert_user)) {
+    
+    $uuid_service = \Drupal::service('uuid');
+    foreach ($insert_user as $key => $uid) {
+      $all_notifications[] = [
+        'title' => $node->getTitle(),
+        'entity_id' => $entity_id,
+        'entity_type' => $entity_type,
+        'status' => 1,
+        'operation' => $operation,
+        'uid' => $uid,
+        'uuid' => $uuid_service->generate(),
+        'created' => time(),
+      ]; 
+    }
+    UserNotificationStorage::bulkInsert($all_notifications); 
+  }
+  // bulk update the status and created date
+  if($update_user){
+    $update_fields = ['status' => 1,'created' => time()];
+    UserNotificationStorage::update($update_fields,$update_user);
+  }
+}

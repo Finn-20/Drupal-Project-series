@@ -1,0 +1,30 @@
+ai_utility.config:
+  title: Additional site configuration
+  route_name: ai_utility.email_debug_setting
+  parent: system.admin_config_content
+  expanded: TRUE
+
+ai_utility.bulk_email_settings:
+  title: Bulk email settings
+  route_name: ai_utility.usecase_processBulkMails_settings
+  parent: ai_utility.config
+
+ai_utility.general_email_settings:
+  title: Email debug mode
+  route_name: ai_utility.email_debug_setting
+  parent: ai_utility.config
+
+ai_utility.email_usecase_email_validate:
+  title: Usecase prim/sec owner email validation
+  route_name: ai_utility.usecase_email_validate
+  parent: ai_utility.config
+  
+ai_utility.google_stats_settings:
+  title: Google stats settings
+  route_name: ai_related.site_matrix_config
+  parent: ai_utility.config
+
+ai_utility.tribes_page_settings:
+  title: Tribes page display settings
+  route_name: ai_site_settings.config
+  parent: ai_utility.config

@@ -1,0 +1,28 @@
+{% if notification_count %}
+  <div class="notify_count"><span class="label-count">{{ notification_count }}</span></div>
+{% endif %}
+
+<ul class="user-notification-dropdown-menu dropdown-menu">
+  <li class="header">NOTIFICATIONS</li>
+	{% if notifications %}
+	  <div class="slimScrollDiv">
+		<ul class="menu ai-info-inner-ul" >
+		  {% for notification in notifications %}
+			<li class="{{ notification.visited_class }}" id="sdfdsf">
+			  <div class="menu-info">
+			    <a href="{{ notification.content_link }}" class="waves-effect waves-block">{{ notification.title|raw }}</a>
+  			    <p><i class="far fa-clock"></i> {{ notification.created }} ago</p>
+			  </div>
+			</li>
+		  {% endfor %}
+		</ul>
+		<div class="slimScrollBar" style="background: rgba(0, 0, 0, 0.5); width: 4px; position: absolute; top: 0px; opacity: 0.4; display: none; border-radius: 0px; z-index: 99; right: 1px; height: 181.225px;"></div>
+		<div class="slimScrollRail" style="width: 4px; height: 100%; position: absolute; top: 0px; display: none; border-radius: 0px; background: rgb(51, 51, 51); opacity: 0.2; z-index: 90; right: 1px;"></div>
+	  </div> 
+	{% else %}
+	  <div class="empty-notification">There is no new notification for you.</div>
+	{% endif %}
+  </li>
+  <p class="see-all-notification"><a href="/user-notification-alert">See All Notifications</a></p>
+</ul>
+

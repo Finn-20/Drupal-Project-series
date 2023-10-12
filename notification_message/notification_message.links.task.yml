@@ -1,0 +1,4 @@
+notification_message.content.collection:
+  title: Notification message
+  route_name: entity.notification_message.collection
+  base_route: system.admin_content

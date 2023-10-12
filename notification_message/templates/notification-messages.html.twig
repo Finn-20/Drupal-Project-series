@@ -1,0 +1,27 @@
+{#
+/**
+ * @file
+ * Default theme implementation to display notification messages.
+ *
+ * Available variables:
+ * - count: The count of notification messages.
+ * - messages: An array of the notification messages entities.
+ */
+#}
+
+{% if messages %}
+<div class="notification-messages">
+  {% for message in messages %}
+    {% set classes = ['message'] %}
+
+    {% if message['#notification_message'] %}
+      {% set bundle = message['#notification_message'].bundle() %}
+      {% set classes = classes|merge([
+        'message--type-' ~ bundle|clean_class
+      ]) %}
+    {% endif %}
+
+    <div class="{{ classes|join(' ') }}">{{ message['#notification_message'].message.value | raw }}</div>
+  {% endfor %}
+</div>
+{% endif %}

@@ -1,0 +1,17 @@
+services:
+  user_notification.subscriber:
+    class: Drupal\user_notification\EventSubscriber\UserAlertSubscriber
+    tags:
+      - { name: event_subscriber }
+    arguments: ['@user_notification.notificationutil']
+
+  user_notification.util:
+    class: Drupal\user_notification\Services\UserUtil
+    arguments: ['@config.factory']
+
+  user_notification.notificationutil:
+    class: Drupal\user_notification\Services\NotificationUtil
+    arguments: []
+    tags:
+      - { name: notificationutil }
+

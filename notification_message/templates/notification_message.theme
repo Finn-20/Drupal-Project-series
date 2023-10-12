@@ -1,0 +1,20 @@
+<?php
+
+/**
+ * @file
+ * Define theme functions for the notification message module.
+ */
+
+/**
+ * Define the template preprocess for the notification messages.
+ *
+ * @param $variables
+ *   An array of template variables.
+ */
+function template_preprocess_notification_messages(&$variables) {
+  $element = $variables['element'];
+  $messages = $element['#messages'];
+
+  $variables['count'] = count($messages);
+  $variables['messages'] = $messages;
+}

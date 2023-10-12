@@ -1,0 +1,308 @@
+<?php
+use Drupal\menu_link_content\Entity\MenuLinkContent;
+use Drupal\taxonomy\Entity\Term;
+use Drupal\node\Entity\Node;
+
+
+/**
+ * Create AIG Report menus.
+ */
+function ai_utility_update_8001(){
+	  $menu_report = MenuLinkContent::create([
+    'title' => 'AIG Reports',
+    'link' => ['uri' => 'internal:/admin/reports/aig_reports'],
+    'menu_name' => 'AIG Reports',
+    'expanded' => TRUE,
+      'parent' => 'system.admin_reports',
+  ]);
+  $menu_report->save();
+  $mid = $menu_report->getPluginId();
+
+  // 1. AIG User Reports
+  $menu_sub_user_report = MenuLinkContent::create([
+    'title' => 'AIG User Reports',
+    'link' => ['uri' => 'internal:/admin/content-report/usecase'],
+    'menu_name' => 'AIG Asset Reports',
+    'parent' => $mid,
+  ]);
+  $menu_sub_user_report->save();
+  $user_menu_id = $menu_sub_user_report->getPluginId();
+
+  // user report menu list
+  $user_menus = array(
+    'internal:/admin/content-report/usecase' => 'Content Reports',
+    'internal:/admin/content/contact-owner-tracking-report' => 'Contact Owner Tracking Report',
+    'internal:/admin/content/content-share-tracking-report' => 'Contact Share Tracking  Report',
+    'internal:/admin/content/user_login_tracker' => 'User Login Tracker',
+    'internal:/admin/people/user-report' => 'User Report',
+    'internal:/external-assets-report' => 'External Assets Report',
+    'internal:/user-activity-report' => 'User Activity Report',
+    'internal:/user-monthly-report' => 'User Monthly Report',
+    'internal:/admin/reports/aig_analytics_report/newyaddeduser' => 'New Users Weekwise',
+    'internal:/admin/reports/google-analytics-reports/summary' => 'Google Analytics Summary',
+    'internal:/admin/reports/login-history' => 'Login History',
+    'internal:/registered-user-report' => 'Registered User Report',
+    'internal:/user-video-details' => 'User Video Details',
+    'internal:/admin/structure/webform/manage/contact/results/submissions' => 'Owner Mail Reach Out Report ',
+  );
+  foreach ($user_menus as $key => $value) {
+      MenuLinkContent::create([
+        'title' => $value,
+        'link' => ['uri' => $key],
+        'menu_name' => $value,
+        'parent' => $user_menu_id,
+      ])->save();
+  }
+
+  // 2. AIG Asset Reports
+  $menu_sub_asset_report = MenuLinkContent::create(
+  [
+    'title' => 'AIG Asset Reports',
+    'link' => ['uri' => 'internal:/admin/reports/asset_tracker'],
+    'menu_name' => 'AIG User Reports',
+    'parent' => $mid,
+  ]);
+  $menu_sub_asset_report->save();
+  $asset_menu_id = $menu_sub_asset_report->getPluginId();
+  // asset report menu list
+  $asset_menus = array(
+    'internal:/admin/reports/asset_tracker' => 'Asset Tracker',
+    'internal:/admin/reports/aig-analytics-report' => 'Top View Pages',
+    'internal:/admin/reports/aig-analytics-report/graph' => 'Days Of The Month Graph',
+  );
+  foreach ($asset_menus as $key => $value) {
+      MenuLinkContent::create([
+        'title' => $value,
+        'link' => ['uri' => $key],
+        'menu_name' => $value,
+        'parent' => $asset_menu_id,
+      ])->save();
+  }
+}
+/**
+ * Update taxonomy terms under offers.
+ */
+function ai_utility_update_8002(){
+  $database = \Drupal::database();
+  //taking set of two term names and updating their id's.
+  $term_name_2 = ['AI Analytics & Data Science', 'Intelligent Apps'];
+
+  $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadByProperties(['name' => $term_name_2]);
+  $tids = [];
+  foreach ($terms as $term) {
+  $tids[] = $term->id();
+  }
+
+  $query = \Drupal::database()->select('node__field_offer', 'nfo')
+  ->fields('nfo', ['entity_id', 'field_offer_target_id'])
+  ->condition('field_offer_target_id', $tids[1], '=');
+  $results = $query->execute();
+
+  foreach ($results as $result) {
+  $inner_query = \Drupal::database()->select('node__field_offer', 'nfo')
+  ->fields('nfo', ['entity_id', 'field_offer_target_id'])
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_offer_target_id', $tids[0], '=');
+
+  $check_record = $inner_query->execute();
+  $records = $check_record->fetchAll();
+  $num_results = count($records);
+
+//Check if the record exist.
+  if ($num_results == 0) {
+  \Drupal::database()
+  ->update('node__field_offer')->fields(array('field_offer_target_id' => $tids[0]))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_offer_target_id', $result->field_offer_target_id, '=')
+  ->execute();
+  \Drupal::database()
+  ->update('node_revision__field_offer')->fields(array('field_offer_target_id' => $tids[0]))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_offer_target_id', $result->field_offer_target_id, '=')
+  ->execute();
+  }
+  else {
+  \Drupal::database()
+  ->update('node__field_offer')->fields(array('field_offer_target_id' => 9999))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_offer_target_id', $tids[1], '=')
+  ->execute();
+  \Drupal::database()
+  ->update('node_revision__field_offer')->fields(array('field_offer_target_id' => 9999))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_offer_target_id', $tids[1], '=')
+  ->execute();
+   }
+  }	
+  
+  //merging these two terms and mapping it to a new term
+  $term_name_1 = ['AI Reimagine', 'AI Activate'];
+  $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadByProperties(['name' => $term_name_1]);
+  $tids = [];
+  foreach($terms as $term) {
+   if (empty($tids)) {
+   $term->name ='Data & AI Strategy';
+   //$term->save();
+   }
+   $tids[] = $term->id();
+  }
+
+  $query = \Drupal::database()->select('node__field_offer', 'nfo')
+  ->fields('nfo', ['entity_id', 'field_offer_target_id'])
+  ->condition('field_offer_target_id', $tids[1], '=');
+  $results_1 = $query->execute();
+
+  foreach($results_1 as $result) {
+  \Drupal::database()
+  ->update('node__field_offer') ->fields(array('field_offer_target_id' => $tids[0]))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_offer_target_id', $result->field_offer_target_id, '=')
+  ->execute();
+  \Drupal::database()
+  ->update('node_revision__field_offer') ->fields(array('field_offer_target_id' => $tids[0]))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_offer_target_id', $result->field_offer_target_id, '=')
+  ->execute();
+  }
+}
+
+/**
+ * Update taxonomy terms under industries.
+ */
+function ai_utility_update_8003(){
+  $database = \Drupal::database();
+  
+  //merging capital market's asset to banking.
+  $term_name_upd_1 = ['Banking', 'Capital Markets'];
+  $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadByProperties(['name' => $term_name_upd_1]);
+
+  $tids = [];
+  foreach ($terms as $term) {
+  $tids[] = $term->id();
+  }
+  
+  //query for primary industry starts
+  $query_2 = \Drupal::database()->select('node__field_primary_industry', 'nfui')
+  ->fields('nfui', ['entity_id', 'field_primary_industry_target_id'])
+  ->condition('field_primary_industry_target_id', $tids[1], '=');
+  $results2 = $query_2->execute();
+  
+  foreach ($results2 as $result) {
+  $inner_query2 = \Drupal::database()->select('node__field_primary_industry', 'nfui')
+  ->fields('nfui', ['entity_id', 'field_primary_industry_target_id'])
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_primary_industry_target_id', $tids[0], '=');
+
+  $check_record2 = $inner_query2->execute();
+  $sec_records = $check_record2->fetchAll();
+  $num_results = count($sec_records);
+
+  //Check if the record exist.
+  if ($num_results == 0) {
+  \Drupal::database()
+  ->update('node__field_primary_industry')->fields(array('field_primary_industry_target_id' => $tids[0]))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_primary_industry_target_id', $result->field_primary_industry_target_id, '=')
+  ->execute();
+  \Drupal::database()
+  ->update('node_revision__field_primary_industry')->fields(array('field_primary_industry_target_id' => $tids[0]))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_primary_industry_target_id', $result->field_primary_industry_target_id, '=')
+  ->execute();
+  }
+  else {
+  \Drupal::database()
+  ->update('node__field_primary_industry')->fields(array('field_primary_industry_target_id' => 9999))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_primary_industry_target_id', $tids[1], '=')
+  ->execute();
+  \Drupal::database()
+  ->update('node_revision__field_primary_industry')->fields(array('field_primary_industry_target_id' => 9999))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_primary_industry_target_id', $tids[1], '=')
+  ->execute();
+   }
+  }
+  
+  //query for usecase i.e. optional industries starts
+  $query_2 = \Drupal::database()->select('node__field_usecase_industry', 'nfui')
+  ->fields('nfui', ['entity_id', 'field_usecase_industry_target_id'])
+  ->condition('field_usecase_industry_target_id', $tids[1], '=');
+  $results2 = $query_2->execute();
+  
+  foreach ($results2 as $result) {
+  $inner_query2 = \Drupal::database()->select('node__field_usecase_industry', 'nfui')
+  ->fields('nfui', ['entity_id', 'field_usecase_industry_target_id'])
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_usecase_industry_target_id', $tids[0], '=');
+
+  $check_record2 = $inner_query2->execute();
+  $sec_records = $check_record2->fetchAll();
+  $sec_num_results = count($sec_records);
+ 
+  //Check if the record exist.
+  if ($sec_num_results == 0) {
+  \Drupal::database()
+  ->update('node__field_usecase_industry')->fields(array('field_usecase_industry_target_id' => $tids[0]))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_usecase_industry_target_id', $result->field_usecase_industry_target_id, '=')
+  ->execute();
+  \Drupal::database()
+  ->update('node_revision__field_usecase_industry')->fields(array('field_usecase_industry_target_id' => $tids[0]))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_usecase_industry_target_id', $result->field_usecase_industry_target_id, '=')
+  ->execute();
+  }
+  else {
+  \Drupal::database()
+  ->update('node__field_usecase_industry')->fields(array('field_usecase_industry_target_id' => 9999))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_usecase_industry_target_id', $tids[1], '=')
+  ->execute();
+  \Drupal::database()
+  ->update('node_revision__field_usecase_industry')->fields(array('field_usecase_industry_target_id' => 9999))
+  ->condition('entity_id', $result->entity_id, '=')
+  ->condition('field_usecase_industry_target_id', $tids[1], '=')
+  ->execute();
+   }
+  }
+}
+
+/**
+ * Update the empty published date with the first record from revision table.
+ */
+function ai_utility_update_8005(){
+
+  $database = \Drupal::database();
+  
+  $or_query = \Drupal::database()->select('node_field_data', 'nfd')
+  ->fields('nfd', ['nid', 'published_at', 'changed', 'status'])
+  ->condition('type', 'use_case_or_accelerator', '=');
+  
+  $or_group = $or_query->orConditionGroup()
+  ->isNull('published_at')
+  ->condition('published_at', 2147483647, '=');
+  $or_results = $or_query->condition($or_group)->execute();
+  
+  foreach ($or_results as $or_result) {
+    if ($or_result->status == 1 && $or_result->published_at == NULL) {
+      $query = \Drupal::database()->select('node_field_revision', 'nfr')
+      ->fields('nfr', ['nid', 'published_at', 'changed'])
+      ->condition('nfr.nid', $or_result->nid)  
+      ->orderBy('nfr.vid', 'ASC')
+      ->range(0, 1);
+   
+	  $records = $query->execute();
+      $query_results = $records->fetchAssoc();
+  
+	  $node = Node::load($query_results['nid']);	  
+	  $node->set('published_at', $query_results['changed']);
+	  $node->save();
+	}
+	elseif ($or_result->status == 0 && $or_result->published_at == 2147483647) {
+	  $node = Node::load($or_result->nid);	  
+      $node->set('published_at', NULL);
+      $node->save();
+	}    
+  }
+}

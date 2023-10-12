@@ -1,0 +1,50 @@
+<?php
+
+/**
+ * @file
+ * Define the hook implementations for the notification message module.
+ */
+
+use Drupal\notification_message\Plugin\Block\NotificationMessageBlock;
+
+/**
+ * Implements hook_theme().
+ */
+function notification_message_theme($existing, $type, $theme, $path) {
+  return [
+    'notification_messages' => [
+      'render element' => 'element',
+      'path' => "{$path}/templates",
+      'file' => 'notification_message.theme',
+      'template' => 'notification-messages'
+    ]
+  ];
+}
+
+/**
+ * Implements hook_theme_suggestions_HOOK().
+ */
+function notification_message_theme_suggestions_notification_messages(array $variables) {
+  $suggestions = [];
+
+  $theme_hook = $variables['theme_hook_original'];
+
+  /** @var \Drupal\notification_message\Plugin\Block\NotificationMessageBlock $block */
+  if ($block = $variables['element']['#block']) {
+    if ($block instanceof NotificationMessageBlock) {
+      $types = $block->getNotificationMessageType();
+      ksort($types);
+
+      $type_string = !empty($types)
+        ? implode('_', $types)
+        : 'all';
+      $suggestions[] = "{$theme_hook}__types__{$type_string}";
+
+      if ($message_mode = $block->getNotificationMessageDisplayMode()) {
+        $suggestions[] = "{$theme_hook}__display__{$message_mode}";
+      }
+    }
+  }
+
+  return $suggestions;
+}
