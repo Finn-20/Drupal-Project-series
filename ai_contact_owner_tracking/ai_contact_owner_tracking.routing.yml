@@ -1,0 +1,7 @@
+ai_contact_owner_tracking.tracking_details:
+  path: 'admin/content/contact-owner-tracking-report'
+  defaults:
+    _form: '\Drupal\ai_contact_owner_tracking\Form\ContactOwnerTrackingReport'
+    _title: 'Contact Owner Tracking Report'
+  requirements:
+    _permission: 'view aig user report'

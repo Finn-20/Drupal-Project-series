@@ -1,0 +1,10 @@
+tribes_page_slideshow:
+  js:
+    js/tribes_slideshow_pager.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+tribes_pagination:
+  js:
+    js/tribes_pagination.js: {}

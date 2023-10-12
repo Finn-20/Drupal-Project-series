@@ -1,0 +1,6 @@
+name: AI Content Notifications
+description: AI Content Notifications
+package: Custom
+type: module
+version: 1.0
+core: 8.x

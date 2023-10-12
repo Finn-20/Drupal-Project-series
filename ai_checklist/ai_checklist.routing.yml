@@ -1,0 +1,136 @@
+ai_checklist.config:
+  path: 'admin/config/content/checklist_category/config'
+  defaults:
+    _form: '\Drupal\ai_checklist\Form\Settings\ChecklistConfigForm'
+    _title: 'Checklist Configurations'
+  requirements:
+    _permission: 'administer checklist'
+
+ai_checklist.category:
+  path: 'admin/config/content/checklist_category'
+  defaults:
+    _form: '\Drupal\ai_checklist\Form\Category\CategoryForm'
+    _title: 'Checklist Category'
+  requirements:
+    _permission: 'administer checklist'
+
+ai_checklist_category.add:
+  path: 'admin/config/content/checklist_category/add'
+  defaults:
+    _title: 'Add AI Checklist Category'
+    _form: '\Drupal\ai_checklist\Form\Category\CategoryAddForm'
+  requirements:
+    _permission: 'administer checklist'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+ai_checklist_category.edit:
+  path: 'admin/config/content/checklist_category/{first}/edit'
+  defaults:
+    _title: 'Edit AI Checklist Category'
+    _form: '\Drupal\ai_checklist\Form\Category\CategoryEditForm'
+  requirements:
+    _permission: 'administer checklist'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+ai_checklist_category.delete:
+  path: 'admin/config/content/checklist_category/{first}/delete'
+  defaults:
+    _controller: '\Drupal\ai_checklist\Controller\ChecklistController::deleteCategory'
+  requirements:
+    _permission: 'administer checklist'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+ai_checklist.sub_category:
+  path: 'admin/config/content/checklist_sub_category'
+  defaults:
+    _form: '\Drupal\ai_checklist\Form\Subcategory\SubCategoryForm'
+    _title: 'Checklist Sub Category'
+  requirements:
+    _permission: 'administer checklist'
+
+ai_checklist_sub_category.add:
+  path: 'admin/config/content/checklist_sub_category/add'
+  defaults:
+    _title: 'Add AI Checklist Sub Category'
+    _form: '\Drupal\ai_checklist\Form\Subcategory\SubCategoryAddForm'
+  requirements:
+    _permission: 'administer checklist'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+ai_checklist_sub_category.edit:
+  path: 'admin/config/content/checklist_sub_category/{first}/edit'
+  defaults:
+    _title: 'Edit AI Checklist Sub Category'
+    _form: '\Drupal\ai_checklist\Form\Subcategory\SubCategoryEditForm'
+  requirements:
+    _permission: 'administer checklist'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+ai_checklist_sub_category.delete:
+  path: 'admin/config/content/checklist_sub_category/{first}/delete'
+  defaults:
+    _controller: '\Drupal\ai_checklist\Controller\ChecklistController::deleteSubCategory'
+  requirements:
+    _permission: 'administer checklist'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+ai_checklist.questions:
+  path: 'admin/config/content/checklist_questions'
+  defaults:
+    _form: '\Drupal\ai_checklist\Form\Questions\QuestionsForm'
+    _title: 'Checklist Questions'
+  requirements:
+    _permission: 'administer checklist'
+
+ai_checklist_question.add:
+  path: 'admin/config/content/checklist_questions/add'
+  defaults:
+    _title: 'Add AI Checklist Question'
+    _form: '\Drupal\ai_checklist\Form\Questions\QuestionAddForm'
+  requirements:
+    _permission: 'administer checklist'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+ai_checklist_question.edit:
+  path: 'admin/config/content/checklist_questions/{first}/edit'
+  defaults:
+    _title: 'Edit AI Checklist Question'
+    _form: '\Drupal\ai_checklist\Form\Questions\QuestionEditForm'
+  requirements:
+    _permission: 'administer checklist'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+ai_checklist_question.delete:
+  path: 'admin/config/content/checklist_questions/{first}/delete'
+  defaults:
+    _controller: '\Drupal\ai_checklist\Controller\ChecklistController::deleteQuestion'
+  requirements:
+    _permission: 'administer checklist'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+ 
+entity.node.ai_checklist:
+  path: '/node/{node}/checklist'
+  defaults:
+    _controller: '\Drupal\ai_checklist\Controller\ChecklistController::view'
+    _title: 'Checklist'
+  requirements:
+    _custom_access: '\Drupal\ai_checklist\AccessChecks\ChecklistAccessCheck::access'
+    node: \d+

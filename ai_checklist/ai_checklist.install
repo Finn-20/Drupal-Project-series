@@ -1,0 +1,157 @@
+<?php
+
+/**
+ * @file
+ * Install file.
+ */
+
+use Drupal\Core\Database\Database;
+
+/**
+ * Implements hook_schema().
+ */
+function ai_checklist_schema() {
+  $schema = [
+    'ai_checklist_category' => [
+      'fields' => [
+        'category_id' => [
+          'type' => 'serial',
+          'not null' => TRUE,
+        ],
+        'category_name' => [
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+        ],
+        'weight' => [
+          'type' => 'int',
+          'not null' => FALSE,
+          'default' => 0,
+        ],
+      ],
+      'primary key' => ['category_id'],
+    ],
+    'ai_checklist_subcategory' => [
+      'fields' => [
+        'sub_category_id' => [
+          'type' => 'serial',
+          'not null' => TRUE,
+        ],
+        'category_id' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'sub_category_name' => [
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+        ],
+        'weight' => [
+          'type' => 'int',
+          'not null' => FALSE,
+          'default' => 0,
+        ],
+      ],
+      'primary key' => ['sub_category_id'],
+    ],
+    'ai_checklist_questions' => [
+      'fields' => [
+        'question_id' => [
+          'type' => 'serial',
+          'not null' => TRUE,
+        ],
+        'sub_category_id' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'checklist_question' => [
+          'type' => 'text',
+          'not null' => TRUE,
+        ],
+        'weight' => [
+          'type' => 'int',
+          'not null' => FALSE,
+          'default' => 0,
+        ],
+      ],
+      'primary key' => ['question_id'],
+    ],
+    'ai_checklist_answers' => [
+      'fields' => [
+        'answer_id' => [
+          'type' => 'serial',
+          'not null' => TRUE,
+        ],
+        'sub_category_id' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'checklist_answer' => [
+          'type' => 'text',
+          'not null' => TRUE,
+        ],
+        'ref_nid' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'uid' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'timestamp' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'status' => [
+          'type' => 'int',
+          'description' => "Answer Status",
+          'not null' => TRUE,
+          'default' => 1,
+        ],
+      ],
+      'primary key' => ['answer_id'],
+    ],
+  ];
+  return $schema;
+}
+
+/**
+ * Implements hook_update_N().
+ */
+function ai_checklist_update_8001() {
+  $status = [
+    'type' => 'int',
+    'description' => "Answer Status",
+    'not null' => TRUE,
+    'default' => 1,
+  ];
+  $schema = Database::getConnection()->schema();
+  if (!db_field_exists('ai_checklist_answers', 'status')) {
+    $schema->addField('ai_checklist_answers', 'status', $status);
+  }
+}
+
+/**
+ * Implements hook_update_N().
+ */
+function ai_checklist_update_8002() {
+  // Create the definition for the field.
+  $new_field = [
+    'type' => 'text',
+    'not null' => TRUE,
+  ];
+
+  db_change_field('ai_checklist_questions', 'checklist_question', 'checklist_question', $new_field);
+  db_change_field('ai_checklist_answers', 'checklist_answer', 'checklist_answer', $new_field);
+}

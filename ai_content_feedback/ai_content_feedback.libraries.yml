@@ -1,0 +1,8 @@
+ai_content_feedback_library:
+  css:
+    theme:
+      css/ai_content_feedback.css: {}
+  js:
+    js/ai_content_feedback.js: {}
+  dependencies:
+    - core/jquery

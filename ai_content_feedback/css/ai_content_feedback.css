@@ -1,0 +1,85 @@
+div#usecase_content_feedback_modal {
+  width: 625px;
+  top: 15%;
+  left: 25%;
+  padding: 10px;
+  border-radius: 10px;
+  overflow: hidden;
+  height: 400px;
+}
+
+div#usecase_content_feedback_modal .modal-header {
+  padding: 0px;
+  border-bottom-width: 0px;
+}
+div#usecase_content_feedback_modal .modal-header .close {
+  margin-right: 10px;
+  margin-top: 10px;
+  font-size: 0px;
+  cursor: pointer;
+  padding: 0px 4px 22px 5px;
+  color: #f9f5f5;
+  background: url(../assets/cross.png) no-repeat center center #696969;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  border-radius: 5px;
+  width: 25px;
+  height: 24px;
+  border: none;
+  opacity: 0.6;
+}
+
+div#usecase_content_feedback_modal textarea#edit-usecase-feedback {
+  background: #efefef;
+  border-radius: 10px;
+  border: none;
+  font-size: 18px;
+}
+
+div#usecase_content_feedback_modal #block-aicontentfeedbackblock button.btn-primary.btn {
+  font-style: normal;
+  font-weight: bold;
+  font-size: 16px;
+  line-height: 19px;
+  color: #000000;
+  border-radius: 5px;
+  background: #03c2ff;
+  border-radius: 10px 0px;
+  border: none;
+  margin: .5em 0 .5em 0;
+}
+
+
+div#usecase_content_feedback_modal #block-aicontentfeedbackblock label.control-label {
+  font-size: 24px;
+  font-family: Ubuntu;
+  display: inline-block;
+  color: #333333;
+  width: auto;
+  height: auto;
+}
+
+div#usecase_content_feedback_modal #block-aicontentfeedbackblock div.form-item-usecase-feedback label.control-label {
+  font-size: 20px;
+  display: block;
+  margin-bottom: 10px;
+}
+
+div#usecase_content_feedback_modal #block-aicontentfeedbackblock div.form-type-fivestar.form-item-content-rating {
+  width: 100%;
+  margin-left: 0px;
+  display: block;
+}
+div#usecase_content_feedback_modal #block-aicontentfeedbackblock div.form-item-content-rating {
+  margin-left: 20px;
+  display: inline-block;
+  width: 50%;
+}
+
+div#usecase_content_feedback_modal #block-aicontentfeedbackblock div.fivestar-widget .star {
+  width: 20px;
+  height: 17px;
+}
+
+div#usecase_content_feedback_modal #block-aicontentfeedbackblock div.form-item-usecase-feedback {
+  margin-top: 20px;
+}

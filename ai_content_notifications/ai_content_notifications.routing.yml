@@ -1,0 +1,7 @@
+ai_content_notifications.config:
+  path: 'admin/config/content/ai_content_notification/config'
+  defaults:
+    _form: '\Drupal\ai_content_notifications\Form\AINotificationConfigForm'
+    _title: 'Content Notification Configurations'
+  requirements:
+    _permission: 'administer content notification Configuration'

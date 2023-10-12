@@ -1,0 +1,17 @@
+ai_checklist.category.add_form:
+  route_name: ai_checklist_category.add
+  title: 'Add category'
+  appears_on:
+    - ai_checklist.category
+
+ai_checklist.sub_category.add_form:
+  route_name: ai_checklist_sub_category.add
+  title: 'Add Sub category'
+  appears_on:
+    - ai_checklist.sub_category
+
+ai_checklist.question.add_form:
+  route_name: ai_checklist_question.add
+  title: 'Add Question'
+  appears_on:
+    - ai_checklist.questions

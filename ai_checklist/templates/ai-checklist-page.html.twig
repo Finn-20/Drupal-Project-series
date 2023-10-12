@@ -1,0 +1,129 @@
+<div class="node-view-link">
+  <div class="usecase-icon"><a href="{{ node_view_link }}" target="_blank"><img src="/themes/custom/aitheme/images/edit-tool/use-case-bulb.png" /></a></div>
+  <div class="usecase-link">Link to <a href="{{ node_view_link }}" target = "_blank">{{ node_title }}</a></div>
+  <div style="clear: both;"></div>
+</div>
+{% if message %}
+  <div class="message">
+    <h3>{{ message }}</h3>
+  </div>
+{% endif %}
+
+<div class="form_wrapper">
+  <form id="{{ checklist_form['#id']}}" method="{{ checklist_form['#method'] }}">
+  {% set first = 1 %}
+  {% for category in questions_with_category %}
+    <div class="category_wrapper row">
+        {% set text = category.category_name %}
+
+      <div class="col-sm-4 questions-wrapper" id="category-height-reference-{{ text|length > 4 ? text|slice(0, 4) : text }}">
+	    <div class="category_name">{{ category.category_name }}</div>
+	    <div class="subcategory-questions-wrapper">
+    	  {% for subcategory in category.sub_category %}
+    	    <div class="subcategory-wrapper" data-class="sub-category-{{ subcategory.sub_category_id }}">
+    		  <div class="subcategory_name">{{ subcategory.sub_category_name }}</div>
+    		  <div class="questions_wrapper">
+    		    {% for question in subcategory.questions %}
+    			  <div class="question">{{ question }}</div>
+    			{% endfor %}
+    		   </div>
+    		</div>
+    	  {% endfor %}
+		</div>
+		</div>
+		
+		{% if first == '1' %}
+		  {% set ansHeadingClass = 'show-bg-color' %}
+		{% else %}
+		  {% set ansHeadingClass = 'hide-bg-color' %}
+		{% endif %}
+		
+		<div class="col-sm-4 answers-wrapper">
+          <div class="answer-heading {{ ansHeadingClass }}">
+          {% if first == '1' %}
+           Answers
+          {% else %}
+            &nbsp;
+          {% endif %}
+          </div>
+		  <div class="subcategory-ans-wrapper" id="subcategory-ans-{{ text|length > 4 ? text|slice(0, 4) : text }}">
+        	{% for subcategory in category.sub_category %}
+        	  {% set sid = subcategory.sub_category_id %}
+        	  {% set ans = 'answer_' ~ sid %}
+        	  {% if attribute(checklist_form, ans) is defined %}
+        	    {% set ansOuterClass = 'sub-category-answers-outer' %}
+        	  {% else %}
+        	    {% set ansOuterClass = 'sub-category-answers-outer full-height' %}
+        	  {% endif %}
+        	  <div class="answers sub-category-{{ subcategory.sub_category_id }}">
+        	    <div class="{{ ansOuterClass }}">
+        	      {% for comment in subcategory.author_answers %}
+        		    <div class="subcategory_answers"><span class="user-submission">{{ comment.formatted_date }} ~{{ comment.submitted_by }}:</span> {{ comment.checklist_answer|raw }}</div>
+        		  {% endfor %}
+        		</div>
+        		 {% if attribute(checklist_form, ans) is defined %}
+        		  <div class="question_input_wrapper">
+        		   {{ attribute(checklist_form, ans) }}
+        		  </div> 
+        		 {% endif %}
+        	  </div>
+        	{% endfor %}	
+          </div>
+		</div>
+        
+        <div class="col-sm-4 reviewer_comments_wrapper">
+          <div class="reviewer-heading {{ ansHeadingClass }}">
+          {% if first == '1' %}
+            Reviewer's Comment
+          {% else %}
+            &nbsp;
+          {% endif %}
+          </div>
+			<div class="subcategory-reviewer-wrapper" id="subcategory-reviewer-{{ text|length > 4 ? text|slice(0, 4) : text }}">
+        	{% for subcategory in category.sub_category %}
+        	  {% set scid = subcategory.sub_category_id %}
+        	  {% set review = 'review_' ~ scid %}
+        	  {% if attribute(checklist_form, review) is defined %}
+        	    {% set reviewOuterClass = 'sub-category-answers-outer' %}
+        	  {% else %}
+        	    {% set reviewOuterClass = 'sub-category-answers-outer full-height' %}
+        	  {% endif %}
+        	  <div class="answers sub-category-{{ subcategory.sub_category_id }}">
+        	    <div class="{{ reviewOuterClass }}">
+        	      {% for comment in subcategory.reviewer_answers %}
+        		    <div class="subcategory_answers"><span class="user-submission">{{ comment.formatted_date }} ~{{ comment.submitted_by }}:</span> {{ comment.checklist_answer|raw }}</div>
+        		  {% endfor %}
+        		</div>
+        		
+        		 {% if attribute(checklist_form, review) is defined %}
+        		   <div class="comment_input_wrapper">
+        		     {{ attribute(checklist_form, review) }}
+        		   </div> 
+        		 {% endif %}
+        		
+        	  </div>
+        	{% endfor %}	
+            </div>
+		</div>
+		<div style="clear: both"></div>
+	</div>
+	{% set first = 0 %}
+    {% endfor %}
+    {{ checklist_form.form_build_id }}
+    {{ checklist_form.form_token }}
+    {{ checklist_form.form_id }}
+    <div class="checklist_action_wrapper">
+		<div class="checklist_submit_actions">
+		  {{ checklist_form.actions }}
+		</div>
+		<div class="checklist_no_submit_info">
+		  {{ checklist_form.no_submit_info }}
+		</div>
+		<div class="checklist_submit_actions">
+		  {{ checklist_form.add_remove_contributor }}
+		</div>
+		<div class="clearfix"></div>
+    </div>
+    
+  </form>
+</div>

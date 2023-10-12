@@ -1,0 +1,25 @@
+ai_checklist.config:
+  title: AI Checklist
+  route_name: ai_checklist.category
+  parent: system.admin_config_content
+  expanded: TRUE
+
+ai_checklist.category:
+  title: AI Checklist Category 
+  route_name: ai_checklist.category
+  parent: ai_checklist.config
+
+ai_checklist.sub_category:
+  title: AI Checklist Sub Category 
+  route_name: ai_checklist.sub_category
+  parent: ai_checklist.config
+  
+ai_checklist.questions:
+  title: AI Checklist Questions 
+  route_name: ai_checklist.questions
+  parent: ai_checklist.config
+  
+ai_checklist.settings:
+  title: Configurations 
+  route_name: ai_checklist.config
+  parent: ai_checklist.config

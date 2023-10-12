@@ -1,0 +1,72 @@
+<?php
+
+/**
+ * @file
+ * Ai Collaborate module.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Url;
+
+
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Array $form
+ * \Drupal\Core\Form\FormStateInterface $form_state
+ *  unknown $form_id.
+ */
+function ai_collaborate_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+  if ($form_id == 'node_collaborate_tribes_form' || $form_id == 'node_collaborate_tribes_edit_form') {	  
+    $form['#title'] = 'Add Collaborate Content';
+
+    $options = ['absolute' => TRUE, 'attributes' => ['target' => '_blank']];
+    $url = Url::fromRoute('entity.taxonomy_vocabulary.overview_form', ['taxonomy_vocabulary' => 'collaborate_category'], $options);
+    $add_term_link = \Drupal::l(t('Create/Edit Tribes button'), $url);
+    $form['addcollaborateterm'] = [
+      '#type' => 'markup',
+      '#markup' => $add_term_link,
+      '#weight' => '1',
+    ];
+
+    $form['actions']['submit']['#value']= t('Publish');
+    $form['actions']['submit']['#weight']= 10;
+    unset($form['actions']['delete']);
+
+    array_unshift($form['actions']['submit']['#submit'], 'collaborate_tribes_form_submit');
+
+    $moduleHandler = \Drupal::service('module_handler');
+
+    if ($moduleHandler->moduleExists('ai_contribute_usecase')) {
+      add_draft($form);
+    }
+  }
+  return $form;
+}
+
+/**
+ * Custom submit to published the previously unpublished content.
+ */
+function collaborate_tribes_form_submit($form, &$form_state) {
+  $button_clicked = (string)$form_state->getTriggeringElement()['#value'];
+  if ($button_clicked == "Save draft") {
+    $form_state->setValue('status', ['value' => 0]);
+  }elseif($button_clicked == "Publish") {
+    $form_state->setValue('status', ['value' => 1]);
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function ai_collaborate_theme() {
+  return [
+    'collaborate_leader_cards' => [
+      'variables' => [
+        'items' => NULL,
+
+      ],
+    ],
+  ];
+}

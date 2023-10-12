@@ -1,0 +1,12 @@
+view own checklist:
+  title: View Own Checklist
+  description: Access checklist submitted by own.
+  restrict access: false
+view any checklist:
+  title: View Any Checklist
+  description: Access any checklist submitted by any user.
+  restrict access: true
+administer checklist:
+  title: Administer Checklist
+  description: Access the Checklist administration pages
+  restrict access: true

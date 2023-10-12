@@ -1,0 +1,45 @@
+<?php 
+use Drupal\Core\Database\Database;
+/**
+ * Implements hook_schema().
+ */
+function ai_contact_owner_tracking_schema() {
+  $schema = [
+    'ai_contact_owner_tracking' => [
+      'fields' => [
+        'tracking_id' => [
+          'type' => 'serial',
+          'not null' => TRUE,
+        ],
+        'nid' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'uid' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'is_submitted' => [
+          'type' => 'int',
+          'description' => "Is this submitted by the user",
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'timestamp' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'submission_id' => [
+          'type' => 'int',
+          'not null' => FALSE,
+          'default' => 0,
+        ],
+      ],
+      'primary key' => ['tracking_id'],
+    ]
+  ];
+  return $schema;
+}

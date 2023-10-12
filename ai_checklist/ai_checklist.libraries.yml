@@ -1,0 +1,8 @@
+ai_checklist_page:
+  css:
+    theme:
+      css/ai_checklist.css: {}
+  js:
+    js/ai_checklist.js: {}
+  dependencies:
+    - core/jquery

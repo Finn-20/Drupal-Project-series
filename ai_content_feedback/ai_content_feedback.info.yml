@@ -1,0 +1,8 @@
+name: AI Content Feedback
+description: AI Gallery Content Feedback
+package: Custom
+type: module
+core_version_requirement: ^8 || ^9
+core: 8.x
+dependencies:
+  - content_feedback

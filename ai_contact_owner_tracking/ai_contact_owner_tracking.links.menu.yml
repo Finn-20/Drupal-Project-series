@@ -1,0 +1,5 @@
+ai_contact_owner_tracking.tracking:
+  title: Contact Owner Tracking Report
+  route_name: ai_contact_owner_tracking.tracking_details
+  parent: system.admin_reports
+  expanded: TRUE

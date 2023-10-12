@@ -1,0 +1,4 @@
+administer content notification Configuration:
+  title: Administer Content Notification Configuration
+  description: Provides the content notification Configuration
+  restrict access: true

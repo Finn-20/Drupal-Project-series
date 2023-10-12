@@ -1,0 +1,24 @@
+entity.node.ai_checklistform:
+  route_name: entity.node.ai_checklist
+  base_route: entity.node.canonical
+  title: 'Checklist'
+  
+ai_checklist.category:
+  title: 'AI Checklist Category'
+  route_name: ai_checklist.category
+  base_route: ai_checklist.category
+
+ai_checklist.sub_category:
+  title: 'AI Checklist Sub Category'
+  route_name: ai_checklist.sub_category
+  base_route: ai_checklist.category
+  
+ai_checklist.questions:
+  title: 'AI Checklist Questions'
+  route_name: ai_checklist.questions
+  base_route: ai_checklist.category  
+
+ai_checklist.config:
+  title: 'Configurations'
+  route_name: ai_checklist.config
+  base_route: ai_checklist.category

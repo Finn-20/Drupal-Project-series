@@ -1,0 +1,6 @@
+name: Content Reference filter
+description: Filter the content through fields permission.
+package: Custom
+type: module
+core_version_requirement: ^8 || ^9
+core: 8.x

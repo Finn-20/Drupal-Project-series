@@ -1,0 +1,18 @@
+<?php
+
+/**
+ * @file
+ * Add reviewer_message field to {content_feedback} table.
+ */
+
+/**
+ * Add reviewer_message field.
+ */
+function ai_content_feedback_update_8400() {
+  $reviewer_message = [
+    'type' => 'text',
+    'not null' => FALSE,
+    'size' => 'big',
+  ];
+  db_add_field('content_feedback', 'reviewer_message', $reviewer_message);
+}

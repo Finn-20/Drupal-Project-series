@@ -1,0 +1,4 @@
+ai_contact_owner_tracking_admin:
+  css:
+    theme:
+      assets/css/ai_contact_owner_tracking.css: {}

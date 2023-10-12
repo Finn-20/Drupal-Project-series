@@ -1,0 +1,433 @@
+<?php
+
+/**
+ * @file
+ * Content feedback module.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\ReplaceCommand;
+use Drupal\Component\Utility\Html;
+use Drupal\Component\Render\PlainTextOutput;
+use Drupal\user\Entity\User;
+use Drupal\Core\Database\Database;
+use Drupal\file\Entity\File;
+use Drupal\Core\Url;
+
+/**
+ * Implements hook_form_alter().
+ */
+function ai_content_feedback_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+
+  $current_user = \Drupal::currentUser();
+  if ($form_id == 'content_feedback_form') {
+    $form['#prefix'] = '<div id="feedback_form_container">';
+    $form['#suffix'] = '</div>';
+
+    $name = \Drupal::config('content_feedback.settings')->get('name');
+    $email = \Drupal::config('content_feedback.settings')->get('email');
+    $feedback_title = \Drupal::config('content_feedback.settings')->get('feedback_title');
+
+    $feedback_bannerimg = \Drupal::config('content_feedback.settings')->get('feedback_bannerimg');
+    $feedback_fileSRC = '/' . drupal_get_path('module', 'ai_content_feedback') . '/assets/default_image.png';
+    if (isset($feedback_bannerimg[0]) && !empty($feedback_bannerimg[0])) {
+      $feedback_fileid = $feedback_bannerimg[0];
+      $feedback_file = File::load($feedback_fileid);
+      if (NULL != $feedback_file) {
+        $feedback_fileSRC = file_create_url($feedback_file->getFileUri());
+      }
+    }
+
+    $feedback_banner_title = \Drupal::config('content_feedback.settings')->get('feedback_banner_title');
+    $feedback_placeholder = \Drupal::config('content_feedback.settings')->get('feedback_placeholder');
+    if (!($name['show'])) {
+      $form['name'] = [
+        '#type' => 'hidden',
+        '#value' => $current_user->getUsername(),
+      ];
+    }
+    if (!($email['show'])) {
+      $form['email'] = [
+        '#type' => 'hidden',
+        '#value' => $current_user->getEmail(),
+      ];
+    }
+    $feedback_html = '<div class="feedback-parent-div">
+      <div class="feedback-banner-image">
+        <img src=' . $feedback_fileSRC . ' class="img-responsive jpg" />
+      </div>
+      <div class="feedback-banner-text">' . $feedback_banner_title . '</div>
+      <div class="clear-fix"></div>
+    </div>';
+
+    $form['banner_details'] = [
+      '#markup' => $feedback_html,
+      '#weight' => -1,
+    ];
+    $form['message']['#title'] = '';
+    $form['message']['#placeholder'] = $feedback_placeholder;
+    $form['actions']['send'] = [
+      '#type' => 'submit',
+      '#value' => 'Submit',
+      '#ajax' => ['callback' => 'ai_content_feedback_submit'],
+    ];
+  }
+  elseif ($form_id == 'content_feedback_settings') {
+    $content_feedback_settings = \Drupal::config('content_feedback.settings');
+    $form['global']['#weight'] = '0';
+    $form['dialog_size']['#weight'] = '1';
+    $form['dialog_width']['#weight'] = '2';
+    $form['name']['#weight'] = '3';
+    $form['feedback_title'] = [
+      '#type' => 'textfield',
+      '#title' => t('Feedback Title'),
+      '#default_value' => $content_feedback_settings->get('feedback_title'),
+      '#weight' => 4,
+      '#maxlength' => 180,
+
+    ];
+    $form['feedback_banner_title'] = [
+      '#type' => 'textfield',
+      '#title' => t('Feedback Banner Title'),
+      '#default_value' => $content_feedback_settings->get('feedback_banner_title'),
+      '#weight' => 5,
+      '#maxlength' => 180,
+
+    ];
+    $form['feedback_bannerimg'] = [
+      '#type' => 'managed_file',
+      '#title' => t('Feedback Banner'),
+      '#upload_location' => 'public://file',
+      '#upload_validators' => ['file_validate_extensions' => ['png gif jpg jpeg']],
+      '#weight' => 6,
+      '#default_value' => $content_feedback_settings->get('feedback_bannerimg'),
+    ];
+
+    $form['feedback_placeholder'] = [
+      '#type' => 'textfield',
+      '#title' => t('Feedback Textarea Placeholder'),
+      '#default_value' => $content_feedback_settings->get('feedback_placeholder'),
+      '#weight' => 7,
+      '#maxlength' => 180,
+
+    ];
+
+    $email_token_help = t('Available variables are: [user:display-name], [user:account-name], [user:mail], [feedback:message], [feedback:url].');
+
+    $form['email'] = [
+      '#type' => 'vertical_tabs',
+      '#title' => t('Emails Templates'),
+      '#weight' => 8,
+    ];
+
+    // Confirmation Email to User template.
+    $form['acf_confirmation_email'] = [
+      '#type' => 'details',
+      '#title' => t('Feedback Confirmation to user'),
+      '#description' => t('Add notification email messages sent to <em>user</em> after feedback submission.') . '<br/><br/>' . $email_token_help,
+      '#group' => 'email',
+
+    ];
+
+    $form['acf_confirmation_email']['confirmation_email_subject'] = [
+      '#type' => 'textfield',
+      '#title' => t('Subject'),
+      '#default_value' => $content_feedback_settings->get('confirmation_email_subject'),
+      '#maxlength' => 180,
+
+    ];
+    $form['acf_confirmation_email']['confirmation_email_body'] = [
+      '#type' => 'textarea',
+      '#title' => t('Body'),
+      '#default_value' => $content_feedback_settings->get('confirmation_email_body'),
+      '#rows' => 15,
+    ];
+
+    // Notification Email to Administrator template.
+    $form['acf_notification_email'] = [
+      '#type' => 'details',
+      '#title' => t('Feedback Notification to administrator'),
+      '#description' => t('Add notification email messages sent to <em>administrator</em> after feedback submission.') . '<br/><br/>' . $email_token_help,
+      '#group' => 'email',
+    ];
+
+    $form['acf_notification_email']['notification_email_to'] = [
+      '#type' => 'textfield',
+      '#title' => t("Recipient\'s Email id"),
+      '#default_value' => $content_feedback_settings->get('notification_email_to'),
+      '#maxlength' => 180,
+    ];
+
+    $form['acf_notification_email']['notification_email_subject'] = [
+      '#type' => 'textfield',
+      '#title' => t('Subject'),
+      '#default_value' => $content_feedback_settings->get('notification_email_subject'),
+      '#maxlength' => 180,
+    ];
+    $form['acf_notification_email']['notification_email_body'] = [
+      '#type' => 'textarea',
+      '#title' => t('Body'),
+      '#default_value' => $content_feedback_settings->get('notification_email_body'),
+      '#rows' => 15,
+    ];
+    $form['disable']['#weight'] = 9;
+    $form['#submit'][] = '_ai_content_feedback_configuration_submit';
+  }
+
+  if ($form_id == 'content_feedback_edit') {
+    $path = \Drupal::request()->getpathInfo();
+    $arg = explode('/', $path);
+    $id = $arg[5];
+    $connection = Database::getConnection();
+    $fields = [
+      'id',
+      'name',
+      'email',
+      'message',
+      'path',
+      'ipaddress',
+      'reviewer_message',
+      'status',
+    ];
+    $feedback = $connection->select('content_feedback', 'cf')
+      ->fields('cf', $fields)
+      ->condition('id', $id);
+    $executed = $feedback->execute();
+    $result = $executed->fetchAssoc();
+
+    $form['path']['#attributes']['disabled'] = 'disabled';
+    $form['name']['#attributes']['disabled'] = 'disabled';
+    $form['email']['#attributes']['disabled'] = 'disabled';
+    $form['ipaddress']['#attributes']['disabled'] = 'disabled';
+    $form['message']['#attributes']['disabled'] = 'disabled';
+    $form['reviewer_message'] = [
+      '#type' => 'textarea',
+      '#title' => t('Reviewer Message'),
+      '#default_value' => $result['reviewer_message'],
+      '#rows' => 3,
+      '#states' => [
+        'visible' => ['input[name="status"]' => ['value' => 2]],
+      ],
+    ];
+    $form['#submit'][] = '_ai_content_feedback_resolve_submit';
+    return $form;
+  }
+}
+
+/**
+ * Implements callback_resolve_submit().
+ */
+function _ai_content_feedback_resolve_submit(&$form, FormStateInterface $form_state) {
+  $path = \Drupal::request()->getpathInfo();
+  $arg = explode('/', $path);
+  $id = $arg[5];
+  $redirectUrl = Url::fromRoute('content_feedback_list.content');
+  $values = $form_state->getValues();
+  // Print $values['reviewer_message'];die;.
+  $status = $values['status'];
+  $name = $values['name'];
+  $email = $values['email'];
+  $ip = $values['ipaddress'];
+  $message = $values['message'];
+  $path = $values['path'];
+  $reviewer_message = $values['reviewer_message'];
+  $connection = Database::getConnection();
+  $updated = $connection->update('content_feedback')
+    ->fields(
+        [
+          'status' => $status,
+          'name' => $name,
+          'email' => $email,
+          'ipaddress' => $ip,
+          'message' => $message,
+          'path' => $path,
+          'reviewer_message' => $reviewer_message,
+          'updated' => time(),
+        ]
+      )
+    ->condition('id', $id)
+    ->execute();
+  drupal_set_message(t('Content Feedback has been updated.'));
+
+}
+
+/**
+ * Implements callback_configuration_submit().
+ */
+function _ai_content_feedback_configuration_submit(&$form, FormStateInterface $form_state) {
+  // print_r($form_state->getValue('reviewer_message'));die;.
+  $config = \Drupal::service('config.factory')->getEditable('content_feedback.settings');
+
+  $config->set('confirmation_email_subject', $form_state->getValue('confirmation_email_subject'));
+  $config->set('confirmation_email_body', $form_state->getValue('confirmation_email_body'));
+  $config->set('notification_email_to', $form_state->getValue('notification_email_to'));
+  $config->set('notification_email_subject', $form_state->getValue('notification_email_subject'));
+  $config->set('notification_email_body', $form_state->getValue('notification_email_body'));
+  $config->set('feedback_title', $form_state->getValue('feedback_title'));
+  $config->set('feedback_bannerimg', $form_state->getValue('feedback_bannerimg'));
+  $config->set('feedback_banner_title', $form_state->getValue('feedback_banner_title'));
+  $config->set('feedback_placeholder', $form_state->getValue('feedback_placeholder'));
+  $config->save();
+}
+
+/**
+ * Submit Handeler.
+ */
+function ai_content_feedback_submit($form, FormStateInterface $form_state) {
+
+  $response = new AjaxResponse();
+
+  $content_feedback_settings = \Drupal::config('content_feedback.settings');
+  $_user = \Drupal::currentUser();
+  $current_user = User::load($_user->id());
+
+  // If there are any form errors, re-display the form.
+  if ($form_state->hasAnyErrors()) {
+    $response->addCommand(new ReplaceCommand('#feedback_form_container', $form));
+  }
+  else {
+    $values = $form_state->getValues();
+    $name = isset($values['name']) ? $values['name'] : NULL;
+    $email = isset($values['email']) ? $values['email'] : NULL;
+    $message = $values['message'];
+    $path = $values['path'];
+    $ipaddress = $values['ipaddress'];
+    $timestamp = time();
+
+    $feedback_id = ai_content_feedback_add($name, $email, $message, $path, $ipaddress, $timestamp);
+
+    $feedback_data = [
+      'message' => $message,
+      'url' => \Drupal::request()->getSchemeAndHttpHost() . '/admin/content/feedback/edit/' . $feedback_id,
+    ];
+    $params = ['user' => $current_user, 'feedback' => $feedback_data];
+
+    _ai_content_feedback_notify('feedback_confirmation', $email, $params);
+    _ai_content_feedback_notify('feedback_notification', $content_feedback_settings->get('notification_email_to'), $params);
+
+    $element = [
+      '#type' => 'markup',
+      '#markup' => 'Thank you for your feedback, we will make our best to improve the Data and AI Gallery to answer your needs and come back to you if required.',
+      '#prefix' => '<div id="success-message">',
+      '#suffix' => '</div>',
+    ];
+    $response->addCommand(new ReplaceCommand('#feedback_form_container', $element));
+  }
+
+  return $response;
+}
+
+/**
+ * Add content feedback.
+ */
+function ai_content_feedback_add($name, $email, $message, $path, $ipaddress, $timestamp) {
+  $connection = Database::getConnection();
+  $feedback_id = $connection->insert('content_feedback')->fields(
+      [
+        'name' => $name,
+        'email' => $email,
+        'message' => $message,
+        'path' => $path,
+        'ipaddress' => $ipaddress,
+        'created' => $timestamp,
+        'updated' => $timestamp,
+      ]
+  )->execute();
+
+  return $feedback_id;
+}
+
+/**
+ * Implements hook_mail().
+ */
+function ai_content_feedback_mail($key, &$message, $params) {
+  $content_feedback_settings = \Drupal::config('content_feedback.settings');
+  $options = [
+    'langcode' => $message['langcode'],
+  ];
+  $message['from'] = \Drupal::config('system.site')->get('mail');
+
+  $token_service = \Drupal::token();
+  $token_options = [
+    'callback' => 'ai_content_feedback_mail_tokens',
+    'clear' => TRUE,
+  ];
+
+  switch ($key) {
+    case 'feedback_confirmation':
+      $message['subject'] = PlainTextOutput::renderFromHtml($token_service->replace($content_feedback_settings->get('confirmation_email_subject'), $params, $token_options));
+      $message['body'][] = Html::escape($token_service->replace($content_feedback_settings->get('confirmation_email_body'), $params, $token_options));
+      break;
+
+    case 'feedback_notification':
+      $message['subject'] = PlainTextOutput::renderFromHtml($token_service->replace($content_feedback_settings->get('notification_email_subject'), $params, $token_options));
+      $message['body'][] = Html::escape($token_service->replace($content_feedback_settings->get('notification_email_body'), $params, $token_options));
+      break;
+  }
+}
+
+/**
+ * Implements callback_notify().
+ */
+function _ai_content_feedback_notify($key, $to, $params = []) {
+  $mailManager = \Drupal::service('plugin.manager.mail');
+  $module = 'ai_content_feedback';
+  $langcode = \Drupal::currentUser()->getPreferredLangcode();
+  $send = TRUE;
+
+  $result = $mailManager->mail($module, $key, $to, $langcode, $params, NULL, $send);
+  if ($result['result'] != TRUE) {
+    $message = t('There was a problem sending your email notification to @email.', ['@email' => $to]);
+    \Drupal::logger('mail-log')->error($message);
+    return;
+  }
+
+  $message = t(
+    'AI Content Feedback Notify : An email notification has been sent to @email ',
+     ['@email' => $to]
+   );
+  \Drupal::logger('mail-log')->notice($message);
+}
+
+/**
+ * Token callback to add unsafe tokens for user mails.
+ *
+ * This function is used by \Drupal\Core\Utility\Token::replace() to set up
+ * some additional tokens that can be used in email messages generated by
+ * user_mail().
+ *
+ * @param array $replacements
+ *   An associative array variable containing mappings from token names to
+ *   values (for use with strtr()).
+ * @param array $data
+ *   An associative array of token replacement values. If the 'user' element
+ *   exists, it must contain a user account object with the following
+ *   properties:
+ *   - login: The UNIX timestamp of the user's last login.
+ *   - pass: The hashed account login password.
+ * @param array $options
+ *   A keyed array of settings and flags to control the token replacement
+ *   process. See \Drupal\Core\Utility\Token::replace().
+ */
+function ai_content_feedback_mail_tokens(array &$replacements, array $data, array $options) {
+  if (isset($data['feedback'])) {
+    $replacements['[feedback:message]'] = $data['feedback']['message'];
+    $replacements['[feedback:url]'] = $data['feedback']['url'];
+  }
+}
+
+/**
+ * Implements hook_preprocess_node().
+ */
+function ai_content_feedback_preprocess_node(&$variables) {
+  $node = \Drupal::routeMatch()->getParameter('node');
+  if (!empty($node)) {
+    if (NULL != $node->getType()) {
+      $node_type = $node->getType();
+      if (in_array($node_type, ['use_case_or_accelerator', 'asset'])) {
+        $variables['#attached']['library'][] = 'ai_content_feedback/ai_content_feedback_library';
+      }
+    }
+  }
+}

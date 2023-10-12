@@ -1,0 +1,3 @@
+services:
+  ai_content_notifications.AIContentNotificationService:
+    class: Drupal\ai_content_notifications\Services\AIContentNotificationService

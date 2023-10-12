@@ -1,0 +1,32 @@
+ai_collaborate.collaborate:
+  path: '/ai_collaborate'
+  defaults:
+    _controller: '\Drupal\ai_collaborate\Controller\collaborateController::collaborate'
+  requirements:
+    _permission: 'access content'
+ai_collaborate.display_image:
+  path: 'collaborate/category-content/{id}'
+  defaults:
+    _controller: '\Drupal\ai_collaborate\Controller\collaborateController::categorycontent'
+  requirements:
+    _permission: 'access content'
+ai_collaborate.display_pdf:
+  path: 'collaborate/display-pdf/{fid}'
+  defaults:
+    _controller: '\Drupal\ai_collaborate\Controller\collaborateController::newsletterPdf'
+  requirements:
+    _permission: 'access content'
+ai_collaborate.tribes_categories:
+  path: 'admin/content/tribes_categories'
+  defaults:
+    _form: '\Drupal\ai_collaborate\Form\TribesCategorySelectionForm'
+    _title: 'Collaborate tribes category'
+  requirements:
+    _permission: 'administer site configuration'
+ai_collaborate.tribes_asset_listing:
+  path: 'admin/content/tribes_assets_listing'
+  defaults:
+    _form: '\Drupal\ai_collaborate\Form\TribesAssestListingForm'
+    _title: 'Tribes Assets'
+  requirements:
+    _permission: 'administer site configuration'

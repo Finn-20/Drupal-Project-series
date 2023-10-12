@@ -1,0 +1,665 @@
+<?php
+
+/**
+ * @file
+ * Ai checklist module.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\Entity\Node;
+use Drupal\Core\Url;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Component\Render\PlainTextOutput;
+use Drupal\Component\Utility\Html;
+use Drupal\taxonomy\Entity\Term;
+use Drupal\user\Entity\User;
+use Drupal\ai_archive\AiArchiveStorage;
+use Drupal\Core\Queue\QueueFactory;
+use Drupal\Core\Queue\QueueInterface;
+use Drupal\ai_contribute_usecase\AiOtherFieldStorage;
+
+/**
+ * Implements hook_theme().
+ */
+function ai_checklist_theme($existing, $type, $theme, $path) {
+  return [
+    'ai_checklist_page' => [
+      'variables' => [
+        'questions_with_category' => NULL,
+        'checklist_form' => NULL,
+        'node_view_link' => NULL,
+        'node_title' => NULL,
+        'message' => NULL,
+      ],
+      'render element' => 'form',
+    ],
+  ];
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Aichecklist array $form
+ * aichecklist \Drupal\Core\Form\FormStateInterface $form_state
+ * aichecklist unknown $form_id.
+ */
+function ai_checklist_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+  if ($form_id == 'node_use_case_or_accelerator_form' || $form_id == 'node_use_case_or_accelerator_edit_form') {
+    // Custom submit handler to redirect user to checklist form.
+    $form['actions']['submit']['#submit'][] = '_ai_checklist_node_use_case_add_checklist_form_submit';
+
+    // Change Moderation Submit Button ordering to needs_review, draft and published.
+    if (isset($form['moderation_state']['widget'][0]['#options']) && !empty($form['moderation_state']['widget'][0]['#options']) && is_array($form['moderation_state']['widget'][0]['#options'])) {
+
+      $options = $form['moderation_state']['widget'][0]['#options'];
+      $new_options = [];
+
+      if (isset($options['needs_review']) && !empty($options['needs_review'])) {
+        $new_options['needs_review'] = $options['needs_review'];
+      }
+      if (isset($options['draft']) && !empty($options['draft'])) {
+        $new_options['draft'] = $options['draft'];
+      }
+      if ((isset($options['published']) && !empty($options['published'])) || (isset($options['archived']) && !empty($options['archived']))) {
+        $published_access = isUserHasPublishAccess($form);
+        if ($published_access && (isset($options['published']) && !empty($options['published']))) {
+          $new_options['published'] = $options['published'];
+        }
+        if ((isset($options['submit_for_review']) && !empty($options['submit_for_review']))) {
+          $new_options['submit_for_review'] = $options['submit_for_review'];
+        }
+        if ((isset($options['archived']) && !empty($options['archived']))) {
+          $new_options['archived'] = $options['archived'];
+        }
+      }
+      if (isset($new_options) && !empty($new_options)) {
+        $form['moderation_state']['widget'][0]['#options'] = $new_options;
+      }
+    }
+  }
+}
+
+/**
+ * IsUserHasPublishAccess.
+ */
+function isUserHasPublishAccess($form) {
+  $published_access = TRUE;
+  $current_user = \Drupal::currentUser();
+  $current_userid = $current_user->id();
+  $roles = $current_user->getRoles();
+
+  if (in_array('administrator', $roles)) {
+    return TRUE;
+  }
+
+  $user_list = [];
+  if (isset($form['field_primary_domain']['widget']['#default_value'][0]) && !empty($form['field_primary_domain']['widget']['#default_value'][0])) {
+    $primary_domain_tid = $form['field_primary_domain']['widget']['#default_value'][0];
+    $primary_domain = Term::load($primary_domain_tid);
+    $domain_lead_by = $primary_domain->get('field_lead_by')->getValue();
+    if (isset($domain_lead_by[0]['target_id']) && !empty($domain_lead_by[0]['target_id'])) {
+      $user_list[] = $domain_lead_by[0]['target_id'];
+    }
+  }
+
+  if (isset($form['field_primary_industry']['widget']['#default_value'][0]) && !empty($form['field_primary_industry']['widget']['#default_value'][0])) {
+    $primary_industry_tid = $form['field_primary_industry']['widget']['#default_value'][0];
+    $primary_industry = Term::load($primary_industry_tid);
+    $industry_lead_by = $primary_industry->get('field_lead_by')->getValue();
+    if (isset($industry_lead_by[0]['target_id']) && !empty($industry_lead_by[0]['target_id'])) {
+      $user_list[] = $industry_lead_by[0]['target_id'];
+    }
+  }
+
+  if (isset($user_list) && !empty($user_list)) {
+    $published_access = in_array($current_userid, $user_list);
+  }
+
+  return $published_access;
+}
+
+/**
+ * Implements hook_entity_presave().
+ */
+function ai_checklist_entity_presave(EntityInterface $entity) {
+  // Check if it is Use case or accelerator content only.
+  if ($entity->bundle() == 'use_case_or_accelerator') {
+    
+  // check external flag
+  $entity->set('field_external_flag', 0); // default internal content
+  if((strtolower($entity->get('field_business_driver_check')->value) == 'yes') 
+    || (strtolower($entity->get('field_s')->value) == 'yes')
+    || ((strtolower($entity->get('field_demo_video_check')->value) == 'yes') && (strtolower($entity->get('field_demo_video')->value) == 'yes'))
+    || ((strtolower($entity->get('field_have_demonstration')->value) == 'yes') && (strtolower($entity->get('field_live_demo_env_check')->value) == 'yes'))
+    || ((strtolower($entity->get('field_have_video_usecase')->value) == 'yes') && (strtolower($entity->get('field_usecase_video_check')->value) == 'yes'))
+  ) {
+    $entity->set('field_external_flag', 1);
+  }
+    // Get moderation state and checklist submitted values.
+    $moderation_state = $entity->get('moderation_state')->getString();
+    $is_checklist_submitted = $entity->get('field_is_checklist_submitted')->value;
+
+    // If checklist not submitted and moderation state target is needs review, change it to draft.
+    if ($moderation_state == 'draft') {
+      $entity->set('field_redirect_to_checklist', '0');
+      $entity->set('field_is_checklist_submitted', '0');
+    }
+    elseif ($moderation_state == 'needs_review') {
+      $entity->set('field_redirect_to_checklist', '1');
+      if (empty($is_checklist_submitted) || !$is_checklist_submitted) {
+        $entity->set('moderation_state', 'draft');
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function ai_checklist_module_implements_alter(&$implementations, $hook) {
+  switch ($hook) {
+    // Move our hook_form_alter() implementation to the end of the list.
+    case 'form_alter':
+      $group = $implementations['ai_checklist'];
+      unset($implementations['ai_checklist']);
+      $implementations['ai_checklist'] = $group;
+      break;
+  }
+}
+
+/**
+ * Custom submit handler for use case add form.
+ */
+function _ai_checklist_node_use_case_add_checklist_form_submit(&$form, FormStateInterface $form_state) {
+  $values = $form_state->getValues();
+  if (isset($values['nid']) && !empty($values['nid'])) {
+    //update the user draft n review notification
+    _ai_contribute_usecase_notification_update($values['nid']);
+    // get latest and previous revision ids
+    $latest_revisions = \Drupal::database()->select('node_field_revision','r')
+    ->fields('r',array('vid','moderation_state'))
+    ->condition('nid',$values['nid'])->orderBy('vid','DESC')->range(0,2)
+    ->execute()->fetchAll();
+
+    if(isset($latest_revisions) && !empty($latest_revisions)){
+      $latest_revision_ids = [];
+      foreach ($latest_revisions as $latest_revision) {
+        $latest_revision_ids[] = array('vid' => $latest_revision->vid,'moderation_state' => $latest_revision->moderation_state);
+      }
+      $node = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($latest_revision_ids[0]['vid']);
+  
+      $is_checklist_submitted = $node->get('field_is_checklist_submitted')->value;
+      $triggered_element = $form_state->getTriggeringElement()['#id'];
+      
+      if(in_array($triggered_element, array('edit-moderation-state-published','edit-moderation-state-archived','edit-moderation-state-needs-review'))){
+        $queue_factory = \Drupal::service('queue');
+        /** @var QueueInterface $queue */
+        $queue = $queue_factory->get('mail_queue_processor');
+        $node->state_changed_user = \Drupal::currentUser()->id();
+        switch($triggered_element){
+          case 'edit-moderation-state-published':
+            // get current moderation state of node
+            $current_status = $values['current_status'];
+            $message = 'Asset has been published';
+            $node->mail_sending_case = 'published';
+            if(!empty($current_status)){ 
+              $message = 'Asset has been updated';
+              $node->mail_sending_case = 'republished';
+            }
+            $queue->createItem($node);
+            $options = $form['moderation_state']['widget'][0]['#options'];
+            if($options['published'] == 'Un-archive'){ 
+              $message = 'Asset has been un-archived';
+              $node->mail_sending_case = 'un-archived';
+              $queue->createItem($node);
+              _ai_checklist_asset_log($values['nid'],2);
+            }
+            _ai_checklist_other_field($node);
+            // check any new tags are added
+            if($node->get('field_is_tag_added')->value){
+              // call to other field function
+              _ai_checklist_map_tags($node);
+            }
+          break;
+
+          case 'edit-moderation-state-archived':
+            $node->mail_sending_case = 'archived';
+            $queue->createItem($node);
+            $message = 'Asset has been moved to archive state';
+            _ai_checklist_asset_log($values['nid'],1);
+            // delete tag if any added by any user
+            AiOtherFieldStorage::deleteTagByUniquid($values['nid']);
+          break;
+
+          case 'edit-moderation-state-needs-review':
+            $message = 'Asset has been moved to review state';
+            if(isset($latest_revision_ids[1]) && (($latest_revision_ids[1]['moderation_state'] == 'published') || ($latest_revision_ids[1]['moderation_state'] != 'draft'))){
+              $contributors = [];
+              getcontributor_ids($node,$contributors);
+              $queue_factory = \Drupal::service('queue');
+              $queue = $queue_factory->get('mail_queue_processor');
+              $node->state_changed_user = \Drupal::currentUser()->id();
+              $node->mail_sending_case = 'pending_review';
+
+              // check previous state
+              if(isset($latest_revision_ids[1]) && ($latest_revision_ids[1]['moderation_state'] == 'published')){
+                $node->key = 'ai_checklist_reviewer_submission';
+                if (in_array(\Drupal::currentUser()->id(), $contributors)) {
+                  $node->key = 'ai_checklist_author_resubmission';
+                }
+              }else if(isset($latest_revision_ids[1]) && $latest_revision_ids[1]['moderation_state'] != 'draft'){
+                $node->key = 'ai_checklist_reviewer_submission';
+                if (in_array(\Drupal::currentUser()->id(), $contributors)) {
+                  $node->key = 'ai_checklist_author_submission';
+                }
+              }
+              $queue->createItem($node);
+            }
+            // call to other field function
+            _ai_checklist_other_field($node);
+          break;
+        }
+        
+        $check_url = \Drupal\Core\Url::fromRoute('entity.node.canonical', ['node' => $values['nid']], ['absolute' => TRUE]);
+
+        if(!$is_checklist_submitted){
+          $url = '/node/' . $values['nid'] . '/checklist';
+          $check_url = Url::fromUserInput($url);
+        } 
+        drupal_get_messages('status', TRUE);
+        drupal_set_message(t($message));
+        $form_state->setRedirectUrl($check_url);        
+      }
+    }  
+  }
+}
+
+/**
+ * GetUsersEmailsByRoles.
+ */
+function getUsersEmailsByRoles($selected_roles,&$reviewers) {
+  $ids = \Drupal::entityQuery('user')
+    ->condition('status', 1)
+    ->condition('roles', $selected_roles, 'IN')
+    ->execute();
+  $users = User::loadMultiple($ids);
+  foreach ($users as $user) {
+    $mail = $user->get('mail')->value;
+    if ($user->id() != 1 && !in_array($mail, $reviewers)) {
+      $reviewers[$mail] = $mail;
+    }
+  }
+}
+
+/**
+ * GetUseCaseIndustryDomainLeaders.
+ */
+function getUseCaseIndustryDomainLeaders($node,&$reviewers) {
+  if (isset($node) && ($node instanceof Node)) {
+    // get the parent ids of selected category
+    $usecase_primary_industry = $node->get('field_primary_industry')->target_id;
+    $industry_term = \Drupal\taxonomy\Entity\Term::load($usecase_primary_industry);
+    $industry_parent = $industry_term->parent->target_id;
+    if($industry_parent != $usecase_primary_industry){
+      getLeaderEmailByTermId($industry_parent, $reviewers);
+    }
+
+    $usecase_primary_domain = $node->get('field_primary_domain')->target_id;
+    $domain_term = \Drupal\taxonomy\Entity\Term::load($usecase_primary_domain);
+    $domain_parent = $domain_term->parent->target_id;
+    if($domain_parent != $usecase_primary_domain){
+      getLeaderEmailByTermId($domain_parent, $reviewers);
+    }
+    $usecase_coe = $node->get('field_geography')->target_id;
+    getLeaderEmailByTermId($usecase_primary_industry, $reviewers);
+    getLeaderEmailByTermId($usecase_primary_domain, $reviewers);
+    getLeaderEmailByTermId($usecase_coe, $reviewers);
+    // multiple offer section
+    if (NULL != $node->get('field_offer')->getValue()) {
+      foreach ($node->get('field_offer')->getValue() as $offer_leader) {
+        if (isset($offer_leader['target_id']) && !empty($offer_leader['target_id'])) {
+          $offer_id = User::load($offer_leader['target_id']);
+          getLeaderEmailByTermId($offer_id, $reviewers);
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Get contributors mail.
+ */
+function get_contributors_mail($node) {
+  $contributors = [];
+
+  if (NULL != $node->get('field_other_contributors')->getValue()) {
+    foreach ($node->get('field_other_contributors')->getValue() as $contributor) {
+      if (isset($contributor['target_id']) && !empty($contributor['target_id'])) {
+        $contributor_user = User::load($contributor['target_id']);
+        $contributors[] = $contributor_user->get('mail')->value;
+      }
+    }
+  }
+  return $contributors;
+}
+
+/**
+ * GetLeaderEmailByTermId.
+ */
+function getLeaderEmailByTermId($term_id, &$reviewers) {
+  if (isset($term_id) && !empty($term_id)) {
+    $term = Term::load($term_id);
+    if (NULL != $term->get('field_lead_by')->getValue()) {
+      foreach ($term->get('field_lead_by')->getValue() as $leader) {  
+        if (isset($leader['target_id']) && !empty($leader['target_id'])) {
+          $leader_user = User::load($leader['target_id']);
+          $reviewers[$leader_user->get('mail')->value] = $leader_user->get('mail')->value;
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Token callback to add unsafe tokens for user mails.
+ *
+ * This function is used by \Drupal\Core\Utility\Token::replace() to set up
+ * some additional tokens that can be used in email messages generated by
+ * user_mail().
+ *
+ * @param array $replacements
+ *   An associative array variable containing mappings from token names to
+ *   values (for use with strtr()).
+ * @param array $data
+ *   An associative array of token replacement values. If the 'user' element
+ *   exists, it must contain a user account object with the following
+ *   properties:
+ *   - login: The UNIX timestamp of the user's last login.
+ *   - pass: The hashed account login password.
+ * @param array $options
+ *   A keyed array of settings and flags to control the token replacement
+ *   process. See \Drupal\Core\Utility\Token::replace().
+ */
+function ai_checklist_mail_tokens(&$replacements, $data, $options) {
+  if (isset($data['checklist'])) {
+    $replacements['[checklist:usecase-url]'] = $data['checklist']['usecase-url'];
+    $replacements['[checklist:url]'] = $data['checklist']['url'];
+  }
+  $industries = [];
+  if (isset($data['node']) && ($data['node'] instanceof Node)) {
+    if (NULL != $data['node']->field_primary_industry) {
+      $usecase_industries = $data['node']->field_primary_industry->referencedEntities();
+      if (isset($usecase_industries) && !empty($usecase_industries)) {
+        foreach ($usecase_industries as $industry) {
+          $industries[] = $industry->getName();
+        }
+      }
+    }
+
+    $domains = [];
+    if (NULL != $data['node']->field_primary_domain) {
+      $usecase_domain = $data['node']->field_primary_domain->referencedEntities();
+      if (isset($usecase_domain) && !empty($usecase_domain)) {
+        foreach ($usecase_domain as $domain) {
+          $domains[] = $domain->getName();
+        }
+      }
+    }
+
+    $replacements['[node:author]'] = $data['node']->getOwner()->getDisplayName();
+    $replacements['[node:domain]'] = implode(', ', $domains);
+    $replacements['[node:industry]'] = implode(', ', $industries);
+  }
+}
+
+/**
+ * Implements hook_mail().
+ */
+function ai_checklist_mail($key, &$message, $params) {
+  $ai_checklist_settings = \Drupal::config('ai_checklist.settings');
+  $options = [
+    'langcode' => $message['langcode'],
+  ];
+
+  $from = isset($message['reply-to']) ? $message['reply-to'] : \Drupal::config('system.site')->get('mail');
+  $message['from'] = $from;
+  $message['Return-Path'] = $from;
+  $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+  $message['headers']['Return-Path'] = $from;
+  $message['headers']['From'] = $from;
+  $message['headers']['Sender'] = $from;
+  if (isset($params['bcc']) && !empty($params['bcc'])) {
+    $message['headers']['bcc'] = $params['bcc'];
+  }
+  if (isset($params['cc']) && !empty($params['cc'])) {
+    $message['headers']['cc'] = $params['cc'];
+  }
+  $token_service = \Drupal::token();
+  $token_options = ['langcode' => $message['langcode'], 'callback' => 'ai_checklist_mail_tokens', 'clear' => TRUE];
+
+  switch ($key) {
+    case 'ai_checklist_author_submission':
+      $msg = $ai_checklist_settings->get('email_body_by_author');
+      $message['subject'] = PlainTextOutput::renderFromHtml($token_service->replace($ai_checklist_settings->get('email_subject_by_author'), $params, $token_options));
+      $message['body'][] = Html::escape($token_service->replace($msg['value'], $params, $token_options));
+      // testing in prod
+      _is_test_mode_enabled($message);
+      break;
+
+    case 'ai_checklist_author_resubmission':
+      $msg = $ai_checklist_settings->get('email_body_by_author_update');
+      $message['subject'] = PlainTextOutput::renderFromHtml($token_service->replace($ai_checklist_settings->get('email_subject_by_author_update'), $params, $token_options));
+      $message['body'][] = Html::escape($token_service->replace($msg['value'], $params, $token_options));
+      // testing in prod
+      _is_test_mode_enabled($message);
+      break;
+
+    case 'ai_checklist_reviewer_submission':
+      $msg = $ai_checklist_settings->get('email_body_by_reviewer');
+      $message['subject'] = PlainTextOutput::renderFromHtml($token_service->replace($ai_checklist_settings->get('email_subject_by_reviewer'), $params, $token_options));
+      $message['body'][] = Html::escape($token_service->replace($msg['value'], $params, $token_options));
+      // testing in prod
+      _is_test_mode_enabled($message);
+      break;
+
+      case 'ai_checklist_content_published':
+      $msg = $ai_checklist_settings->get('published_email_body');
+      $message['subject'] = PlainTextOutput::renderFromHtml($token_service->replace($ai_checklist_settings->get('published_email_subject'), $params, $token_options));
+      $message['body'][] = Html::escape($token_service->replace($msg['value'], $params, $token_options));
+      // testing in prod
+      _is_test_mode_enabled($message);
+      break;
+
+      case 'ai_checklist_content_republished':
+      $msg = $ai_checklist_settings->get('republished_email_body');
+      $message['subject'] = PlainTextOutput::renderFromHtml($token_service->replace($ai_checklist_settings->get('republished_email_subject'), $params, $token_options));
+      $message['body'][] = Html::escape($token_service->replace($msg['value'], $params, $token_options));
+      // testing in prod
+      _is_test_mode_enabled($message);
+      break;
+  }
+}
+
+/**
+* send mail when asset is published
+*/
+function _ai_checklist_published_mail($node,$key){
+  $nid = $node->id();
+  $mailManager = \Drupal::service('plugin.manager.mail');
+  $module = 'ai_checklist';
+  $langcode = \Drupal::currentUser()->getPreferredLangcode();
+  $send = TRUE;
+  $reciever = $reciever_ccmail = [];
+  $current_userid = \Drupal::currentUser()->id();
+  if($node->state_changed_user){
+    $current_userid = $node->state_changed_user;
+  }
+  $from = User::load($current_userid)->get('mail')->value;
+  $reciever[$from] = $from;
+  $ai_checklist_settings = \Drupal::config('ai_checklist.settings');
+  $time = \Drupal::time()->getCurrentTime();
+  $node_path_alias = \Drupal::service('path.alias_manager')->getAliasByPath('/node/' . $nid);
+  $checklist_data = [
+    'url' => \Drupal::request()->getSchemeAndHttpHost() . '/node/' . $nid . '/checklist',
+    'usecase-url' => \Drupal::request()->getSchemeAndHttpHost() . $node_path_alias,
+  ];
+  $params = ['user' => User::load($current_userid), 'checklist' => $checklist_data, 'node' => $node];
+
+  if (isset($params['node']) && !empty($params['node'])) {
+    $reciever = get_contributors_mail($params['node']);
+    $author = $params['node']->getOwner()->getEmail();
+
+    if (!in_array($author, $reciever)) {
+      $reciever[$author] = $author;
+    }
+  }
+  if ($ai_checklist_settings->get('reviewers_type') == 'industry_domain_lead') {
+
+    $reviewers = [];
+    if (isset($params['node']) && !empty($params['node'])) {
+
+      getUseCaseIndustryDomainLeaders($params['node'],$reviewers);
+      
+      if (NULL != $ai_checklist_settings->get('selected_other_users')) {
+        foreach ($selected_other_users as $other_user) {
+          if (isset($other_user['target_id']) && !empty($other_user['target_id'])) {
+            $other_reciever_mail = User::load($other_user['target_id'])->get('mail')->value;
+            if (!in_array($other_reciever_mail, $reciever)) {
+              $reviewers[$other_reciever_mail] = $other_reciever_mail;
+            }
+          }
+        }
+      }
+    }
+
+    if ((NULL != $ai_checklist_settings->get('selected_fallback_roles'))) {
+      $selected_roles = $ai_checklist_settings->get('selected_fallback_roles');
+      getUsersEmailsByRoles($selected_roles,$reviewers);
+    }
+    
+    if (!empty($reviewers)) {
+      foreach ($reviewers as $reviewerkey => $reviewer) {
+        if (!in_array($reviewer, $reciever)) {
+            $reciever_ccmail[] = $reviewer;
+          }
+      }
+    }
+  }
+  $to = '';
+  if(!empty($reciever_ccmail)){
+    $params['cc'] = implode(',', $reciever_ccmail);
+  }
+  $test_people = _is_test_mode_enabled_people($params);
+  if(!empty($test_people)){
+    $to = $test_people;
+  }else if(is_array($reciever)){
+    $to = implode(',', $reciever);
+  }
+  $result = $mailManager->mail($module, $key, $to, $langcode, $params, $from, $send);
+  if ($result['result'] != TRUE) {
+    $message = t('From Queue:There was a problem sending your email notification to @email. and @cc and From: @from', ['@email' => $to,'@cc' => $params['cc'],'@from' => $from]);
+    \Drupal::logger('mail-log')->error($message);
+    return;
+  }
+  $message = t('From Queue: An email notification has been sent to @email and @cc and From: @from', ['@email' => $to,'@cc' => $params['cc'],'@from' => $from]);
+  \Drupal::logger('mail-log')->notice($message); 
+}
+
+/**
+* Asset archive log
+*/
+function _ai_checklist_asset_log($nid,$status) {
+  $user = \Drupal::currentUser();
+  $archive_log = [
+      'uid' => $user->id(),
+      'status' => $status,
+      'timestamp' => time(),
+      'nid' => $nid
+    ];
+  AiArchiveStorage::insert($archive_log);
+}
+
+/**
+* Get ids of author and contributors
+*/
+function getcontributor_ids($node,&$contributors){
+  $author = $node->get('uid')->getValue();
+  if (isset($author[0]['target_id']) && !empty($author[0]['target_id'])) {
+    $contributors[$author[0]['target_id']] = $author[0]['target_id'];
+  }
+  if (NULL != $node->get('field_other_contributors')->getValue()) {
+    foreach ($node->get('field_other_contributors')->getValue() as $contributor) {
+      if (isset($contributor['target_id']) && !empty($contributor['target_id'])) {
+        $contributors[$contributor['target_id']] = $contributor['target_id'];
+      }
+    }
+  }
+}
+
+/*
+* set the flag
+*/
+function _ai_checklist_other_field($node){
+  $uniqid_session = \Drupal::service('tempstore.private')->get('ai_contribute_usecase');
+  $nid = $node->id();
+  $deleteTags = [];
+  if($uniqid_session->get('partnerUncheckFlag')){
+    $deleteTags[] = 1;
+    $uniqid_session->delete('partnerUncheckFlag');
+  }
+  if($uniqid_session->get('ai_featureUncheckFlag')){
+    $deleteTags[] = 2;
+    $uniqid_session->delete('ai_featureUncheckFlag');
+  }
+  if($uniqid_session->get('frameworksUncheckFlag')){
+    $deleteTags[] = 3;
+    $uniqid_session->delete('frameworksUncheckFlag');
+  }
+  $node->set('field_uniqid', $nid);
+  $node->set('field_is_tag_added', 0);
+  // check any other uncheck flag is set
+  if(!empty($deleteTags)){
+     \Drupal::logger('deleteTags')->notice(print_r($deleteTags,true)); 
+    AiOtherFieldStorage::deleteTag($nid,$deleteTags);
+  }
+  // check any other tag added against this nid
+  if(AiOtherFieldStorage::loadByUniqId($nid)){
+    $node->set('field_is_tag_added', 1);
+  }
+  $node->save();
+}
+
+/**
+* map the tags
+*/
+function _ai_checklist_map_tags($node) {
+  // Mapping the tags
+  $other_tags = AiOtherFieldStorage::mappingTags($node->id());
+  if(!empty($other_tags)){
+    if(!empty($other_tags['partner_tids'])){
+      foreach ($other_tags['partner_tids'] as $k => $p_tid) {
+        $node->field_usecase_technology[] = $p_tid;
+      }
+    }
+    if(!empty($other_tags['feature_tids'])){
+      foreach ($other_tags['feature_tids'] as $k => $ft_tid) {
+        $node->field_usecase_aifeatures[] = $ft_tid;
+      }
+    }
+    if(!empty($other_tags['framework_tids'])){
+      foreach ($other_tags['framework_tids'] as $k => $fm_tid) {
+        $node->field_usecase_framework[] = $fm_tid;
+      }
+    }
+    // making is_tag_added = 0;
+    $node->set('field_is_tag_added', 0);
+  }
+  $node->save();
+  // update data after mapping
+  $update = [
+    'tag_status' => 1,
+    'approved_date' => time(),
+    'approved_by' => \Drupal::currentUser()->id(),
+  ];
+  AiOtherFieldStorage::updateByUniqId($update,$node->id());
+}

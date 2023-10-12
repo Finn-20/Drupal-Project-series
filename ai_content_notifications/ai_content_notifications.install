@@ -1,0 +1,29 @@
+<?php 
+use Drupal\Core\Database\Database;
+/**
+ * Implements hook_schema().
+ */
+function ai_content_notifications_schema() {
+  $schema = [
+    'ai_content_notifications_logs' => [
+      'fields' => [
+        'log_id' => [
+          'type' => 'serial',
+          'not null' => TRUE,
+        ],
+        'nid' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'timestamp' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+      ],
+      'primary key' => ['log_id'],
+    ]
+  ];
+  return $schema;
+}

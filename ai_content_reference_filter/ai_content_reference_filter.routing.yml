@@ -1,0 +1,7 @@
+reference.filter.settings:
+  path: '/admin/config/reference_filter/settings'
+  defaults:
+    _form: '\Drupal\ai_content_reference_filter\Form\ReferenceFilterSettingsForm'
+    _title: 'Reference Filter Configuration'
+  requirements:
+    _permission: 'administer site configuration'

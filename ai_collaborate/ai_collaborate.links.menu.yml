@@ -1,0 +1,5 @@
+ai_collaborate.tribes_categories:
+  title: 'Tribes asset matix'
+  parent: system.admin_content
+  description: 'View events that have recently been logged.'
+  route_name: ai_collaborate.tribes_categories
