@@ -1,0 +1,149 @@
+<?php
+
+use Drupal\Component\Utility\Html;
+use Drupal\user\Entity\User;
+/**
+ * Implements hook_mail().
+ */
+function ai_archive_mail($key, &$message, $params) {
+  $ai_archive_settings = \Drupal::config('ai_archive.settings');
+  $options = [
+    'langcode' => $message['langcode'],
+  ];
+
+  $from = isset($message['reply-to']) ? $message['reply-to'] : \Drupal::config('system.site')->get('mail');
+  $message['from'] = $from;
+  $message['Return-Path'] = $from;
+  $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+  $message['headers']['Return-Path'] = $from;
+  $message['headers']['From'] = $from;
+  $message['headers']['Sender'] = $from;
+  if (isset($params['bcc']) && !empty($params['bcc'])) {
+    $message['headers']['bcc'] = $params['bcc'];
+  }
+  if (isset($params['cc']) && !empty($params['cc'])) {
+    $message['headers']['cc'] = $params['cc'];
+  }
+  $token_service = \Drupal::token();
+  $token_options = ['langcode' => $message['langcode'], 'callback' => 'ai_archive_mail_tokens', 'clear' => TRUE];
+
+  switch ($key) {
+    case 'ai_archive_state_submission':
+      $msg = $ai_archive_settings->get('archived_email_body');
+      $message['subject'] = $ai_archive_settings->get('archived_email_subject');
+      $message['body'][] = Html::escape($token_service->replace($msg['value'], $params, $token_options));
+      // testing in prod
+      _is_test_mode_enabled($message,$key);
+      break;
+
+    case 'ai_unarchive_state_submission':
+      $msg = $ai_archive_settings->get('unarchived_email_body');
+      $message['subject'] = $ai_archive_settings->get('unarchived_email_subject');
+      $message['body'][] = Html::escape($token_service->replace($msg['value'], $params, $token_options));
+      // testing in prod
+      _is_test_mode_enabled($message,$key);
+      break;
+  }
+}
+
+function ai_archive_mail_tokens(&$replacements, $data, $options) {
+  if (isset($data['asset_data'])) {
+    $replacements['[asset:url]'] = $data['asset_data']['asset-url'];
+  }
+}
+
+function _ai_archive_mail_sending($node,$key) {
+  $mailManager = \Drupal::service('plugin.manager.mail');
+  $module = 'ai_archive';
+  $langcode = \Drupal::currentUser()->getPreferredLangcode();
+  $ai_archive_settings = \Drupal::config('ai_archive.settings');
+  $admin_users = $ai_archive_settings->get('mail_non_asset_author_user_list');
+  $node_path_alias = \Drupal::service('path.alias_manager')->getAliasByPath('/node/' . $node->id());
+  $asset_data = [
+    'asset-url' => \Drupal::request()->getSchemeAndHttpHost() . $node_path_alias,
+  ];
+  $params = ['asset_data' => $asset_data];
+  $current_userid = \Drupal::currentUser()->id();
+  if($node->state_changed_user){
+    $current_userid = $node->state_changed_user;
+  }
+  $from = User::load($current_userid)->get('mail')->value;
+  $to = '';
+  $test_people = _is_test_mode_enabled_people($params);
+  if(!empty($test_people)){
+    $to = $test_people;
+  }else{
+    $to = implode(',',getAssetOwners($node));
+    if(!empty($admin_users)){
+      $to = $to.','.$admin_users;
+    }
+  }
+  $result = $mailManager->mail($module, $key, $to, $langcode,$params,$from);
+  if ($result['result'] != TRUE) {
+    $message = t($key.' state: There was a problem sending your email notification to @email.', ['@email' => $to]);
+    \Drupal::logger('mail-log')->error($message);
+    return;
+  }
+  $message = t($key.' state: An email notification has been sent to @email ', ['@email' => $to]);
+  \Drupal::logger('mail-log')->notice($message); 
+}
+
+/**
+* Test function
+*/
+function _is_test_mode_enabled(&$message){
+  $ai_archive_settings = \Drupal::config('ai_archive.settings');
+  $is_prod_test = $ai_archive_settings->get('check_to_enable_testing');
+  if($is_prod_test){
+    $testing_users = $ai_archive_settings->get('mail_testing_user_list');
+    $bcctesting_users = $ai_archive_settings->get('mail_testing_bcc_user_list');
+    if(!empty($testing_users)){
+      $message['subject'] = $message['subject'].' to:'.$testing_users;
+    }
+    if(!empty($bcctesting_users)){
+      $message['subject'] = $message['subject'].' other: '.$bcctesting_users;
+    }
+  }
+  \Drupal::logger('Subject:-')->notice($message['subject']);
+  \Drupal::logger('Message:-')->notice(print_r($message['body'],true));
+}
+
+/**
+  * Get asset owners
+  */
+  function getAssetOwners($node) {
+    // 1 Get the author of the asset
+    $owner = $node->getOwner()->getEmail();
+    $cc [] = $owner;
+    // 2. Primary owner of the asset
+    if (isset($node->field_use_case_primary_owner_ema->value) && !empty($node->field_use_case_primary_owner_ema->value)
+        && valid_email_address($node->field_use_case_primary_owner_ema->value)){
+      $cc[] = $node->field_use_case_primary_owner_ema->value;
+    }
+    // 3. Secondary owner of the asset
+    if (isset($node->field_usecase_secn_owner_email->value) && !empty($node->field_usecase_secn_owner_email->value)
+    &&  valid_email_address($node->field_usecase_secn_owner_email->value)) {
+      $cc[] = $node->field_usecase_secn_owner_email->value;
+    }
+    return $cc;
+  }
+
+/**
+* Test people
+*/
+function _is_test_mode_enabled_people(&$params){
+  $to = '';
+  $ai_archive_settings = \Drupal::config('ai_archive.settings');
+  $is_prod_test = $ai_archive_settings->get('check_to_enable_testing');
+  if($is_prod_test){
+    $testing_users = $ai_archive_settings->get('mail_testing_user_list');
+    if(!empty($testing_users)){
+      $to = $testing_users;
+    }
+    $bcctesting_users = $ai_archive_settings->get('mail_testing_bcc_user_list');
+    if(!empty($bcctesting_users)){
+      $params['cc'] = $bcctesting_users;
+    }
+  }
+  return $to;
+}

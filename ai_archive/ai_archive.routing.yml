@@ -1,0 +1,7 @@
+ai_archive.config:
+  path: 'admin/config/content/ai_archive/config'
+  defaults:
+    _form: '\Drupal\ai_archive\Form\Settings\AIArchiveSettingForm'
+    _title: 'Archive Configurations'
+  requirements:
+    _permission: 'administer archive'

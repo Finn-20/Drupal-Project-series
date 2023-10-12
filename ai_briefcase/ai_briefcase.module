@@ -1,0 +1,164 @@
+<?php
+
+/**
+ * @file
+ * Aibreifcase module.
+ */
+
+use Drupal\views\ViewExecutable;
+use Drupal\node\Entity\Node;
+
+/**
+ * Implements hook_views_pre_render().
+ */
+function ai_briefcase_views_pre_render(ViewExecutable $view) {
+  // Print $view->storage->id(); die;.
+  if (isset($view) && in_array($view->storage->id(), ['my_bookmarks'])) {
+    $view->element['#attached']['library'][] = 'ai_briefcase/ai_briefcase_library';
+  }
+  elseif (in_array($view->storage->id(), ['my_briefcase_details_view'])) {
+    $view->element['#attached']['library'][] = 'ai_briefcase/ai_briefcase_filters';
+  }
+
+}
+
+/**
+ * Implements hook_preprocess_node().
+ */
+function ai_briefcase_preprocess_node(&$variables) {
+  $node = \Drupal::routeMatch()->getParameter('node');
+  $default_theme = \Drupal::configFactory()->getEditable('system.theme')->get('default');
+  if (!empty($node)) {
+    if (NULL != $node->getType()) {
+      $node_type = $node->getType();
+
+      if ($node->getType() == 'briefcase') {
+        $variables['#attached']['library'][] = 'ai_briefcase/briefcase_node';
+      }
+      elseif (in_array($node_type, ['use_case_or_accelerator'])) {
+        if ($default_theme == 'aitheme') {
+          $variables['#attached']['library'][] = 'ai_briefcase/ai_briefcase_library';
+        }
+        else {
+          $variables['#attached']['library'][] = 'ai_briefcase/ai_briefcase_library_2_0';
+        }
+      }
+      else {
+        $variables['#attached']['library'][] = 'ai_briefcase/ai_briefcase_library_2_0';
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_theme().
+ */
+function ai_briefcase_theme() {
+  return [
+    'favorite_into_briefcase_block' => [
+      'variables' => [
+        'current_nid' => NULL,
+        'node_title' => NULL,
+        'briefcase_ids' => NULL,
+        'module_path' => NULL,
+      ],
+      'template' => 'block--favorite-into-briefcase-block',
+    ],
+  ];
+}
+
+/**
+ * Prepares variables for views field templates.
+ *
+ * Default template: views-view-field.html.twig.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - field: The field handler object for the current field.
+ *   - row: Object representing the raw result of the SQL query for the current
+ *     field.
+ *   - view: Instance of the ViewExecutable object for the parent view.
+ */
+function ai_briefcase_preprocess_views_view_field(&$variables) {
+  if (isset($variables['view']) && in_array($variables['view']->storage->id(), ['my_bookmarks']) && in_array($variables['view']->current_display, ['all_briefcase_block', 'all_briefcase_block_2_0'])) {
+    if ($variables['field']->field == 'field_featured_briefcase') {
+      if (NULL != $variables['row']->_entity && $variables['row']->_entity instanceof Node) {
+        $nid = $variables['row']->nid;
+        $field_featured_briefcase = $variables['row']->_entity->get('field_featured_briefcase')->getValue();
+        $checked = '';
+        $selected = 'no';
+        $additional_class = 'not-featured-briefcase';
+        if (isset($field_featured_briefcase[0]['value']) && $field_featured_briefcase[0]['value']) {
+          $checked = ' checked';
+          $selected = 'yes';
+          $additional_class = 'featured-briefcase';
+        }
+        $module_path = drupal_get_path('module', 'ai_briefcase');
+
+        if ($variables['view']->current_display == 'all_briefcase_block') {
+          // For AI Theme.
+          $markup = '<input class="add-to-featured" id="add-to-featured-' . $nid . '" type="checkbox" name="featured-briefcase" value="' . $nid . '" data-selected-value="' . $selected . '"' . $checked . '>
+            <span>Show in "Featured Briefcase"</span>
+            <span id="spinner-' . $nid . '" class="spinner">
+              <img src="/' . $module_path . '/assets/images/spinner.gif" />
+            </span>';
+        }
+        elseif ($variables['view']->current_display == 'all_briefcase_block_2_0') {
+          // For AI Gallery 2.0.
+          if ($selected == 'yes') {
+            $img_src = '/' . $module_path . '/assets/images/featured-briefcase-selected.png';
+            $icon_title = 'Remove from featured';
+          }
+          else {
+            $img_src = '/' . $module_path . '/assets/images/featured-briefcase-select.png';
+            $icon_title = 'Add briefcase as featured';
+          }
+          $markup = '<a class="featured-briefcase-icon ' . $additional_class . '" title="' . $icon_title . '" id="add-to-featured-' . $nid . '"  data-briefcase-value="' . $nid . '" data-selected-value="' . $selected . '">' . $icon_title . '</a>
+            <span id="spinner-' . $nid . '" class="spinner">
+              <img src="/' . $module_path . '/assets/images/spinner.gif" />
+            </span>';
+        }
+        $variables['output'] = [
+          '#type' => 'markup',
+          '#markup' => $markup,
+          '#allowed_tags' => ['input', 'span', 'img', 'a'],
+        ];
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_preprocess_field().
+ */
+function ai_briefcase_preprocess_field(&$variables, $hook) {
+  if (isset($variables['field_name']) && $variables['field_name'] == 'field_favorites') {
+    if (isset($variables['element']['#bundle']) && ($variables['element']['#bundle'] == 'briefcase') && isset($variables['element']['#view_mode']) && ($variables['element']['#view_mode'] == 'full')) {
+      if (isset($variables['items']) && !empty($variables['items'])) {
+        $items = $variables['items'];
+        $items_updated = [];
+        $use_cases = [];
+        $collaterals = [];
+        foreach ($items as $item) {
+          if (isset($item['content']['#node']) && ($item['content']['#node'] instanceof Node)) {
+            if ($item['content']['#node']->bundle() == 'asset') {
+              $collaterals[] = $item;
+            }
+            else {
+              $use_cases[] = $item;
+            }
+          }
+        }
+
+        if (isset($collaterals) && !empty($collaterals)) {
+          $items_updated['asset'] = $collaterals;
+        }
+        if (isset($use_cases) && !empty($use_cases)) {
+          $items_updated['use_case_or_accelerator'] = $use_cases;
+        }
+
+        $variables['items'] = $items_updated;
+      }
+    }
+  }
+}

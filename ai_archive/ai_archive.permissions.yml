@@ -1,0 +1,4 @@
+administer archive:
+  title: Administer Archive Setting
+  description: Access the archive administration pages
+  restrict access: true

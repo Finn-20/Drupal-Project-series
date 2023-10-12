@@ -1,0 +1,396 @@
+/************* My Briefcase Theme *************/
+h1.page-header {
+  width: 76%;
+  margin: 15px auto;
+  padding-left: 10px;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks {
+  width: 76%;
+  margin: 0 auto;
+}
+.view.view-my-bookmarks.view-id-my_bookmarks .my-favorites-details {
+  clear: both;
+}
+
+div.featured-briefcase-wrapper {
+  margin: 10px auto;
+  padding: 10px 0;
+}
+
+div.featured-briefcase-wrapper div.featured-briefcase-title {
+  float: left;
+  width: 45%;
+}
+div.featured-briefcase-wrapper div.create-new-briefcase {
+  width: 45%;
+  float: right;
+  margin-top: 20px;
+  text-align: right;
+}
+div.featured-briefcase-wrapper div.clear-fix {
+  clear: both;
+}
+
+div.featured-briefcase-wrapper div.featured-briefcase-title h2 {
+  width: 210px;
+  font-family: Ubuntu;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 24px;
+  line-height: 24px;
+  color: #2b0a3d;
+  margin-bottom: 10px;
+}
+
+div.featured-briefcase-wrapper div.featured-briefcase-title h2:after {
+  content: '';
+  display: block;
+  margin-top: 8px;
+  width: auto;
+  height: 4px;
+  border-radius: 2px;
+  background-color: #2b0a3d;
+}
+
+div.featured-briefcase-wrapper div.create-new-briefcase a {
+  font-family: Ubuntu;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 18px;
+  line-height: 20px;
+  padding-left: 50px;
+  padding-bottom: 10px;
+  padding-right: 20px;
+  padding-top: 10px;
+  text-decoration: none;
+  cursor: pointer;
+  background: url(../images/create-briefcase-button.png) no-repeat 10px 12px #efefef;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  color: #000000;
+}
+
+div.briefcase-featured-content-wrapper {
+  width: 100%;
+  padding: 10px;
+  background: #ffffff;
+  box-shadow: -4px -4px 4px rgba(0, 0, 0, 0.1), 4px 4px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  margin: 0 auto;
+  position: relative;
+}
+
+div.briefcase-featured-content-wrapper div.featured-briefcase-title h3 {
+  margin-top: 5px;
+  padding: 0 10px;
+  font-weight: bold;
+}
+
+div.briefcase-featured-content-wrapper div.featured-content {
+  width: 98%;
+  margin: 0 auto;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks .view-content {
+  /* height: 400px; */
+  clear: both;
+}
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row {
+  position: static;
+  float: left;
+  display: table-cell;
+  width: 230px;
+  padding: 0;
+  margin-right: 15px;
+  text-overflow: ellipsis;
+  margin-bottom: 15px;
+  background: #f4f4f4!important;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row div.views-field-field-associated-image,
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row div.views-field-field-asset-assoc-img {
+  margin-bottom: 0!important;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row div.views-field-field-associated-image img,
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row div.views-field-field-asset-assoc-img img {
+  border-radius: 5px;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  width: 92%;
+  margin: 10px auto;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row .views-field-title,
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row .views-field-nothing {
+  text-overflow: ellipsis;
+  line-height: 16px;
+  height: 36px;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  padding: 5px 5px 5px 8px;
+  text-indent: 0;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row .views-field-title a,
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row .views-field-nothing a {
+  font-style: normal;
+  font-size: 14px!important;
+  line-height: 16px!important;
+  color: #000000!important;
+  font-weight: 600;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row .views-field-field-solution {
+  font-style: normal;
+  font-weight: normal;
+  font-size: 12px!important;
+  line-height: 14px;
+  color: #000000!important;
+  height: 115px;
+  margin-left: .2em;
+  padding: 6px;
+  word-break: break-word;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row .views-field-totalcount {
+  width: 45%;
+  float: left;
+  padding-right: 15px;
+  clear: both;
+  position: relative;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row .views-field-totalcount div.inner-count-section {
+  position: relative !important;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row .views-field-totalcount div.inner-count-section .fa-eye:before {
+  background-position: 0 5px;
+}
+
+.view.view-my-bookmarks.view-id-my_bookmarks .views_slideshow_cycle_slide .views-row .views-field-field-rate {
+  width: 50%;
+  float: right;
+  margin-top: 5px;
+}
+
+#views_slideshow_cycle_teaser_section_my_bookmarks-page_favorite {
+  margin: 0 auto;
+}
+
+span#views_slideshow_controls_text_previous_my_bookmarks-page_favorite {
+  position: absolute;
+  top: 50%;
+  left: 30px;
+}
+
+span#views_slideshow_controls_text_previous_my_bookmarks-page_favorite a {
+  content: "";
+  line-height: 1;
+  background: url('../images/prev-arrow.png') no-repeat top left transparent;
+  display: block;
+  width: 50px;
+  height: 50px;
+  font-size: 0px;
+}
+
+span#views_slideshow_controls_text_pause_my_bookmarks-page_favorite {
+  display: none;
+}
+
+span#views_slideshow_controls_text_next_my_bookmarks-page_favorite {
+  position: absolute;
+  top: 50%;
+  right: 30px;
+}
+
+span#views_slideshow_controls_text_next_my_bookmarks-page_favorite a {
+  content: "";
+  line-height: 1;
+  background: url('../images/next-arrow.png') no-repeat top left transparent;
+  display: block;
+  width: 50px;
+  height: 50px;
+  font-size: 0px;
+}
+
+div.view-id-my_bookmarks .view-footer {
+  margin: 20px auto;
+}
+
+div.show-briefcase-button a.show-hide-brifcase-link {
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+  display: block;
+  width: 245px;
+  margin: 0 auto;
+  padding: 15px;
+  cursor: pointer;
+  font-family: Ubuntu;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 20px;
+  line-height: 24px;
+  color: #000000;
+  text-decoration: none;
+}
+
+
+div.show-briefcase-button a.show-hide-brifcase-link.hidden-briefcase {
+  background: url(../images/show-more-icon.png) no-repeat 200px 12px #efefef;
+}
+
+div.show-briefcase-button a.show-hide-brifcase-link.visible-briefcase {
+  background: url(../images/hide-briefcase-icon.png) no-repeat 200px 12px #57595a;
+  color: #ffffff;
+  font-weight: bold;
+}
+
+div.view-display-id-all_briefcase_block {
+  width: 80%;
+  margin: 0 auto;
+  margin-top: 20px;
+}
+
+div.view.view-my-bookmarks.view-id-my_bookmarks.view-display-id-all_briefcase_block {
+  width: 100%;
+  margin: 20px auto;
+}
+
+div.view-display-id-all_briefcase_block div.view-header {
+  margin: 15px 0;
+}
+
+div.view-display-id-all_briefcase_block div.view-header span.all_brifcase_title {
+  font-family: Ubuntu;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 24px;
+  line-height: 30px;
+  color: #2b0a3d;
+  border-bottom: 4px solid #2b0a3d;
+}
+
+
+div.view-display-id-all_briefcase_block div.view-content .table-striped > tbody > tr:nth-of-type(odd),
+div.view-display-id-all_briefcase_block div.view-content .table-striped > tbody > tr:nth-of-type(even) {
+  background-color: transparent;
+}
+
+div.view-display-id-all_briefcase_block div.view-content .table-striped > tbody > tr > td {
+  border-width: 0px;
+}
+
+td.views-field-nothing a.my_briefcase_link {
+  font-family: Ubuntu;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 18px;
+  line-height: 21px;
+  color: #000000;
+}
+
+td.views-field-field-featured-briefcase span {
+  font-family: Ubuntu;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 16px;
+  line-height: 18px;
+  color: #57595a;
+}
+
+.views-field-field-featured-briefcase input.add-to-featured {
+  bottom: 0px !important;
+  margin: 5px !important;
+  width: 20px !important;
+  background: #efefef;
+  border: 2px solid #57595a;
+  box-sizing: border-box;
+  border-radius: 5px;
+}
+
+div.view-display-id-all_briefcase_block div.view-content td.views-field-delete-node a {
+  content: "";
+  line-height: 1;
+  background: url('../images/delete-briefcase.png') no-repeat top left transparent;
+  display: block;
+  width: 27px;
+  height: 27px;
+  font-size: 0px;
+}
+
+
+/************** Node save Button *****************/
+
+
+div.link-flag-wrapper {
+  background: #57595a;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.1);
+  border-radius: 10px;
+  width: 145px !important;
+  margin-left: 15px;
+}
+
+div.link-flag-wrapper-open {
+  border-radius: 10px 10px 0 0;
+}
+
+.row-wrapper div.link-flag-wrapper .label-save .views-label {
+  color: #ffffff !important;
+  margin-top: 6px !important;
+}
+
+.view-display-id-block_2 .view-content .action-flag a {
+  background-position: 0px 3px !important;
+}
+
+div.favorite-into-briefcase--block {
+  width: 385px;
+  background: #efefef;
+  box-shadow: 4px 4px 4px rgba(0, 0, 0, 0.25);
+  border-radius: 0px 10px 10px 10px;
+  font-family: Ubuntu;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 14px;
+  line-height: 16px;
+  color: #000000;
+  padding: 20px;
+}
+
+div.favorite-into-briefcase--block a {
+  font-family: Ubuntu;
+  font-style: normal;
+  font-weight: normal;
+  font-size: 14px;
+  line-height: 16px;
+  color: #000000;
+}
+
+.add_to_briefcase_wrapper {
+  padding: 5px 0;
+}
+
+div.add-new-briefcase {
+  margin-top: 15px;
+}
+
+div.add-new-briefcase a.create-briefcase-button {
+  background: url(../images/cross.png) no-repeat top left transparent;
+  padding-left: 20px;
+  font-family: Ubuntu;
+  font-style: italic;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 16px;
+  color: #57595a;
+}
+
+span.spinner {
+  display: inline-block;
+  width: 17px;
+  height: 13px;
+}

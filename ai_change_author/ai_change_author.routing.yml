@@ -1,0 +1,23 @@
+ai_change_author.create_new:
+  path: '/admin/change-author'
+  defaults:
+    _form: '\Drupal\ai_change_author\Form\ChangeAuthorForm'
+    _title: 'Create Change Author Form'
+  requirements:
+    _permission: 'access content'
+    
+ai_change_author.replace_autor:
+  path: '/admin/nodes/{author_by}/list'
+  defaults:
+    _form: '\Drupal\ai_change_author\Form\AuthorReplaceForm'
+    _title: 'Author Replace Form'
+  requirements:
+    _permission: 'access content'
+    
+ai_change_author.changed_author:
+  path: '/admin/nodes/author/{replace_auth_by}/list'
+  defaults:
+    _form: '\Drupal\ai_change_author\Form\ReplacedAuthorForm'
+    _title: 'Author Replace Form'
+  requirements:
+    _permission: 'access content'

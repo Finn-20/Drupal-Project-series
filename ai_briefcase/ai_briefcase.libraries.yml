@@ -1,0 +1,40 @@
+bootbox:
+  js:
+    /libraries/bootbox/bootbox.js: {}
+ai_briefcase_library:
+  css:
+    theme:
+      assets/css/ai_briefcase.css: {}
+  js:
+    assets/js/ai_briefcase.js: {}
+  dependencies:
+    - core/jquery 
+    - core/drupal
+    - core/jquery.once
+    - ai_briefcase/bootbox
+ai_briefcase_library_2_0:
+  css:
+    theme:
+      assets/css/ai_briefcase_2_0.css: {}
+  js:
+    assets/js/ai_briefcase_2_0.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/jquery.once
+    - ai_briefcase/bootbox
+    - core/drupal.ajax
+ai_briefcase_filters:
+  js:
+    assets/js/ai_briefcase_filters.js: {}
+  dependencies:
+    - core/jquery
+briefcase_node:
+  css:
+    theme:
+      assets/css/briefcase_node.css: {}
+  js:
+    assets/js/ai_briefcase_node.js: {}
+  dependencies:
+    - core/jquery
+    - ai_briefcase/bootbox

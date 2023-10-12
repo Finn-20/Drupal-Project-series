@@ -1,0 +1,47 @@
+<?php
+
+/**
+ * @file
+ * Install file.
+ */
+
+use Drupal\Core\Database\Database;
+
+
+
+/**
+ * Implements hook_schema().
+ */
+function ai_archive_schema() {
+  $schema = [
+    'ai_archive_log' => [
+      'fields' => [
+        'nid' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Asset id",
+        ],
+        'uid' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "Who has created log",
+        ],
+        'timestamp' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => "when log is created",
+        ],
+        'status' => [
+          'type' => 'int',
+          'description' => "1=>Archived,2=>Un-archived(published)",
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+      ],
+    ],
+  ];
+  return $schema;
+}

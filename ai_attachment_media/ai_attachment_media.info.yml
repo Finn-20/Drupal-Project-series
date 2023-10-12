@@ -1,0 +1,6 @@
+name: AI Attachment Media
+description: To add Link media plugin in Media type.
+package: Custom
+type: module
+version: 1.0
+core: 8.x

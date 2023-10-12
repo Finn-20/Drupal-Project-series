@@ -1,0 +1,7 @@
+services:
+  ai_briefcase.aiBriefcaseService:
+    class: Drupal\ai_briefcase\Services\AiBriefcaseService
+    arguments: ['@database', '@messenger', '@entity.manager', '@path.alias_manager', '@request_stack']
+  logger.channel.ai_briefcase:
+    parent: logger.channel_base
+    arguments: ['ai_briefcase']

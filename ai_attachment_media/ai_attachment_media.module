@@ -1,0 +1,10 @@
+<?php
+
+use Drupal\ai_attachment_media\Form\ExternalLinkForm;
+
+/**
+ * Implements hook_media_source_info_alter().
+ */
+function ai_attachment_media_media_source_info_alter(array &$sources) {
+  $sources['external_link']['forms']['media_library_add'] = ExternalLinkForm::class;
+}

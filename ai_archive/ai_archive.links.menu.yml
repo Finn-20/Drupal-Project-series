@@ -1,0 +1,10 @@
+ai_archive.config:
+  title: AI Archive
+  route_name: ai_archive.config
+  parent: system.admin_config_content
+  expanded: TRUE
+  
+ai_archive.settings:
+  title: Configurations 
+  route_name: ai_archive.config
+  parent: ai_archive.config

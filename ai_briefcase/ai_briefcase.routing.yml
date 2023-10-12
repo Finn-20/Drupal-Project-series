@@ -1,0 +1,80 @@
+ai_briefcase.create_new:
+  path: '/create-my-briefcase'
+  defaults:
+    _form: '\Drupal\ai_briefcase\Form\CreateBriefcaseForm'
+    _title: 'Create New Briefcase'
+  requirements:
+    _permission: 'access content'
+
+ai_briefcase.modify_my_briefcase:
+  path: 'my_briefcase/{briefcase}/edit'
+  defaults:
+    _form: '\Drupal\ai_briefcase\Form\UpdateBriefcaseForm'
+    _title: 'Update Briefcase'
+  requirements:
+    _permission: 'access content'
+
+ai_briefcase.delete_my_briefcase:
+  path: 'my_briefcase/{briefcase}/delete'
+  defaults:
+    _controller: '\Drupal\ai_briefcase\Controller\BriefcaseController::deleteMyBriefcase'
+  options:
+    parameters:
+      briefcase:
+        type: entity:node
+  requirements:
+    _permission: 'access content'
+
+ai_briefcase.add_favorite:
+  path: 'add_favorite_to_briefcase/{fav_node}/{briefcase}'
+  defaults:
+    _controller: '\Drupal\ai_briefcase\Controller\BriefcaseController::addFavoriteToBriefcase'
+  options:
+    parameters:
+      fav_node:
+        type: entity:node
+      briefcase:
+        type: entity:node
+  requirements:
+    _permission: 'access content'
+
+ai_briefcase.remove_favorite:
+  path: 'delete_favorite_from_briefcase/{fav_node}/{briefcase}'
+  defaults:
+    _controller: '\Drupal\ai_briefcase\Controller\BriefcaseController::deleteFavoriteFromBriefcase'
+  options:
+    parameters:
+      fav_node:
+        type: entity:node
+      briefcase:
+        type: entity:node
+  requirements:
+    _permission: 'access content'
+
+ai_briefcase.remove_all_featured_briefcase:
+  path: 'modify_featured_briefcases'
+  defaults:
+    _controller: '\Drupal\ai_briefcase\Controller\BriefcaseController::modifyFeaturedBriefcases'
+  requirements:
+    _permission: 'access content'
+
+ai_briefcase.modify_featured_briefcase:
+  path: 'modify_featured_briefcases/{briefcase}'
+  defaults:
+    _controller: '\Drupal\ai_briefcase\Controller\BriefcaseController::modifyFeaturedBriefcases'
+  requirements:
+    _permission: 'access content'
+ 
+ai_briefcase.modify_briefcase_details:
+  path: 'modify_briefcase'
+  defaults:
+    _controller: '\Drupal\ai_briefcase\Controller\BriefcaseController::modifyBriefcase'
+  requirements:
+    _permission: 'access content'
+    
+ai_briefcase.redirect_explore_all_url:
+  path: 'ai_explore_all/{argument_tid}/view'
+  defaults:
+    _controller: '\Drupal\ai_briefcase\Controller\BriefcaseController::redirectExploreallUrl'
+  requirements:
+    _permission: 'access content'

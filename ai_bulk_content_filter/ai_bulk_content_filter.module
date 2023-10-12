@@ -1,0 +1,86 @@
+<?php
+
+/**
+ * @file
+ * The main module file.
+ *
+ * The module is for usecase/accelerator content multiselect filter.
+ */
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\views\ViewExecutable;
+use Drupal\views\Plugin\views\query\QueryPluginBase;
+use Drupal\views\Plugin\views\query;
+
+/**
+ * Implements hook_form_alter().
+ */
+function ai_bulk_content_filter_form_alter(&$form, FormStateInterface $form_state, $form_id) {
+
+  if ($form_id == 'views_exposed_form' && $form["#id"] == "views-exposed-form-content-page-1") {
+    $nids = \Drupal::entityQuery('node')
+      ->condition('type', "use_case_or_accelerator", '=')
+      ->condition('langcode', 'en', '=')
+      ->condition('status', 1, '=')
+      ->execute();
+    $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadMultiple($nids);
+    foreach ($nodes as $key => $value) {
+      $title[$value->nid->value] =  $value->title->value;
+    }
+    $form['title_1'] = array(
+      '#type' => 'select',
+      '#options' => $title,
+      '#default_value' => 0,
+      '#description' => t('Select titles from Use-case/Accelerator'),
+      '#multiple' => TRUE,
+      '#attributes' => array(
+        'style' => 'width:700px',
+        'multiple' => TRUE
+      )
+    );
+    $form['#submit'][] = 'ai_bulk_content_filter_form_submit';
+  }   
+}
+
+/**
+ * Implements hook_form_submit().
+ */
+function ai_bulk_content_filter_form_submit(array &$form, FormStateInterface $form_state) {
+  $sub_value = $form_state->cleanValues()->getValue('title_1');
+  foreach($sub_value as $c_value) {
+    $nid_data[] = $c_value;
+  }
+ // Store data in session.
+  $temp_data = $nid_data;
+  $temp_nids = \Drupal::service('user.private_tempstore')->get('ai_bulk_content_filter');
+  $temp_nids->set('tempvalue', $temp_data);
+     }
+/**
+ * Implements hook_views_query_alter().
+ */
+
+function ai_bulk_content_filter_views_query_alter(ViewExecutable $view, QueryPluginBase $query) {
+  
+  if ($view->id() == 'content') {
+    $get_temp_data = \Drupal::service('user.private_tempstore')->get('ai_bulk_content_filter');
+    $nids_data = $get_temp_data->get('tempvalue');
+     foreach ($query->where as &$condition_group) {
+       if (!empty($nids_data)) {
+         $query->addWhere('node_field_data', 'node_field_data.nid', $nids_data, 'IN');
+       }
+     }
+    
+  }
+  if ($view->id() == 'news_letter_subscribed') {
+	  $query = db_select('simplenews_subscriber', 's');
+		$query->fields('s', ['id', 'uid'])
+			->fields('u', ['subscriptions_target_id','subscriptions_status'])
+			->condition('s.uid', $uid,'=')
+			->condition('u.subscriptions_status', 1,'=');
+		$query->join('simplenews_subscriber__subscriptions', 'u', 'u.entity_id = s.id'); 
+		print $query;
+  }
+  if ($view->id() == 'simplenews_subscribers' && $view->current_display = 'page_2') {
+	  
+  }
+}
+

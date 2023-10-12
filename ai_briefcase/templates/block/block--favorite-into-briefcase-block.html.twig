@@ -1,0 +1,34 @@
+{#
+/**
+ * @file
+ * Favorite into briefcase block.
+ */
+#}
+{% set current_nid = content.current_nid %}
+{% set current_node_title = content.node_title %}
+{% set briefcase_ids = content.briefcase_ids %}
+{% set module_path = content.module_path %}
+
+
+ <div class="favorite-into-briefcase--block">
+    {% if briefcase_ids is not empty %}
+      {% for briefcase in briefcase_ids %}
+        
+        {% set checked = '' %}
+        {% set data_selected = 'no' %}
+        {% if briefcase.checked %}
+          {% set checked = ' checked' %}
+          {% set data_selected = 'yes' %}
+        {% endif %}
+        
+        <div class="add_to_briefcase_wrapper">
+          <input class="add-to-fav-chk" id="add-to-fav-chk-{{ briefcase.nid }}" type="checkbox" name="briefcase-names" value="{{ briefcase.nid }}" data-node-id="{{ current_nid }}" data-briefcase-title="{{ briefcase.title|raw|trim }}" data-node-title="{{ current_node_title }}" data-selected-value="{{ data_selected }}"{{ checked }}>
+          <span>{{ briefcase.title|raw|trim }}</span>
+          <span id="spinner-{{ briefcase.nid }}" class="spinner" style="display: none"><img src="/{{ module_path }}/assets/images/spinner.gif" /></span>
+        </div>
+      {% endfor %}
+    {% endif %}
+    <div class="add-new-briefcase">
+      <a href="/create-my-briefcase?nid={{ current_nid }}" class="use-ajax create-briefcase-button" data-dialog-type="modal">Create Briefcase</a>
+    </div>
+ </div>

@@ -1,0 +1,142 @@
+/* -------------overall block style-------------- */
+article.briefcase div.content div.field--name-field-favorites div.field--item {
+  position: static;
+  float: left;
+  display: table-cell;
+  width: 230px;
+  padding: 0;
+  margin-right: 15px;
+  text-overflow: ellipsis;
+  margin-bottom: 15px;
+  background: #f4f4f4!important;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+  border-radius: 10px;
+}
+
+article.briefcase div.content div.field--name-field-favorites div.field--item div.star-rating div.field--item {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin-right: 15px;
+  text-overflow: ellipsis;
+  margin-bottom: 15px;
+  background: transparent;
+  box-shadow: 0px 0px 0px rgba(0, 0, 0, 0.25);
+  border-radius: 0px;
+}
+
+/* ---------block image --------------- */
+article.briefcase div.content div.field--name-field-favorites div.field--item div.associated_image {
+  margin-bottom: 0!important;
+}
+article.briefcase div.content div.field--name-field-favorites div.field--item div.associated_image img {
+  border-radius: 5px;
+  width: 92%!important;
+  margin: 10px;
+  margin-bottom: .4em;
+  box-shadow: 0px 4px 4px rgba(0, 0, 0, 0.25);
+}
+
+/* --------------------block title---------------------- */
+article.briefcase div.content div.field--name-field-favorites div.field--item div.title-search {
+  text-overflow: ellipsis;
+  line-height: 16px;
+  height: 36px;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  padding: 5px 5px 5px 8px;
+  text-indent: 0;
+}
+
+article.briefcase div.content div.field--name-field-favorites div.field--item .title-search a {
+  font-style: normal;
+  font-size: 14px!important;
+  line-height: 16px!important;
+  color: #000000!important;
+  line-height: 18px;
+  margin-bottom: 5px;
+  width: 100%;
+  margin-top: 0;
+  font-weight: 600;
+  min-height: 40px;
+}
+
+/* ----------------------block body----------------------- */
+article.briefcase div.content div.field--name-field-favorites div.field--item .solution {
+  font-style: normal;
+  font-weight: normal;
+  font-size: 12px!important;
+  line-height: 14px;
+  color: #000000!important;
+  word-break: break-word;
+  height: 115px;
+  margin-left: .2em;
+  padding: 6px;
+}
+
+/* ------------download icon-------------- */
+article.briefcase div.content div.field--name-field-favorites div.field--item .inner-count-section .v-icon {
+  display: none;
+}
+
+article.briefcase div.content div.field--name-field-favorites div.field--item .views-field-body {
+  height: 120px!important;
+}
+
+article.briefcase div.content div.field--name-field-favorites div.field--item .fivestar-basic div.fivestar-widget .cancel {
+  display: none;
+}
+
+/* --------------changes to be made in custom css file----------------- */
+.fivestar-small div.fivestar-widget .star,
+.fivestar-small div.fivestar-widget .star a {
+  background: url(../images/Star.png) no-repeat 0 0px !important;
+}
+.inner-count-section i.fa-eye {
+  color: #2b0a3d;
+  border-radius: 99px;
+  /* padding: 2px; */
+  position: relative;
+  bottom: 0;
+  margin-left: 0.5em;
+}
+article.briefcase div.content div.field--name-field-favorites div.field--item div [class*="col-"] .views-field-title a {
+  max-height: 35px!important;
+  padding: 0.2em 0.2em 0.2em 0.4em!important;
+}
+
+
+body.page-node-type-briefcase .page-header {
+  width: 96%;
+  margin: 10px auto;
+}
+
+body.page-node-type-briefcase article.briefcase.full {
+  width: 96%;
+  margin: 0px auto;
+  margin-top: 20px;
+}
+
+.favorites-field-items {
+  clear: both;
+  margin-top: 20px;
+}
+
+div.content-type-label {
+  font-family: Ubuntu;
+  font-style: normal;
+  font-weight: bold;
+  font-size: 24px;
+  line-height: 30px;
+  color: #2b0a3d;
+  margin-bottom: 20px;
+}
+
+div.content-type-label span {
+  border-bottom: 4px solid #2b0a3d;
+}
+.page-node-type-briefcase .field--name-field-favorites .fivestar-average-text.fivestar-average-stars .form-type-select.form-item-vote {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
