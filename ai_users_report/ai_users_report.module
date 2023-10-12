@@ -1,0 +1,21 @@
+<?php
+
+use Drupal\Component\Render\HtmlEscapedText;
+use Drupal\Core\Url;
+
+ 
+ /**
+ * Implements hook_theme().
+ */
+function ai_users_report_theme($existing, $type, $theme, $path) {
+	return [
+    'ai_users_activity_page' => [
+      'variables' => [
+        'header' => NULL,
+		'rows' => NULL
+      ]
+    ],
+  ];
+}
+ 
+ 

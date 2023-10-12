@@ -1,0 +1,7 @@
+ai_site_settings.config:
+  path: 'admin/config/content/ai_site_settings/config'
+  defaults:
+    _form: '\Drupal\ai_site_settings\Form\AISiteSettingConfigForm'
+    _title: 'Site basic(feature) settings'
+  requirements:
+    _permission: 'administer content notification Configuration'

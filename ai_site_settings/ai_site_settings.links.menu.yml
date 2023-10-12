@@ -1,0 +1,5 @@
+ai_site_settings.config:
+  title: Site feature based(basic) configuration
+  route_name: ai_site_settings.config
+  parent: system.admin_config_content
+  expanded: TRUE

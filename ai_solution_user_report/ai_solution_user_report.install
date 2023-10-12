@@ -1,0 +1,66 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions for the Login details module.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function ai_solution_user_report_schema() {
+  $schema['solution_view_report'] = [
+    'fields' => [
+      'record_id' => [
+        'type' => 'serial',
+        'not null' => TRUE,
+        'description' => 'Unique ID for this record.',
+      ],
+      'year_name' => [
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'description' => 'Year name.',
+      ],
+      'month_name' => [
+        'type' => 'varchar',
+        'length' => 128,
+        'not null' => TRUE,
+        'description' => 'Month name.',
+      ],
+
+      'new_logins' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'total_users' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'new_solutions' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'total_solutions' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'avg_session' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+      'total_visits' => [
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
+      ],
+    ],
+    'primary key' => ['record_id'],
+  ];
+  return $schema;
+}

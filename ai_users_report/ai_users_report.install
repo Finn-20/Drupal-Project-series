@@ -1,0 +1,158 @@
+<?php
+
+/**
+ * @file
+ * Install, update, and uninstall functions.
+ */
+use Drupal\Core\Database\Database;
+
+/**
+ * Create ai_user_daily_login table.
+ */
+function ai_users_report_update_8001() {
+	$spec = [
+		'fields' => [
+			'urdlid' => [
+			  'type' => 'serial',
+			  'not null' => TRUE,     
+			  'description' => t('User Daily Login ID')
+			],
+			'uid' => [
+			  'type' => 'int',
+			  'length' => 8,
+			  'not null' => TRUE,
+			  'description' => t('User ID'),
+			],
+			'login_date' => [
+			  'type' => 'int',
+			  'length' => 5,
+			  'not null' => TRUE,    
+			  'description' => t('User Login Date')
+			],
+			'year' => [
+			  'type' => 'int',
+			  'length' => 5,
+			  'not null' => TRUE,    
+			  'description' => t('User Login year')
+			],
+			'month' => [
+			  'type' => 'int',
+			  'length' => 2,
+			  'not null' => TRUE,   
+			  'description' => t('User Login month')
+			],
+			'user_login_hours' => [
+			  'type' => 'int',
+			  'length' => 4,
+			  'not null' => TRUE,
+			  'default' => 0,
+			  'description' => t('No Of hours logged in a day'),
+			],
+		],
+		'primary key' => ['urdlid'],
+		'indexes' => ['uidx' => ['uid'],'yearx' => ['year'],'monthx' => ['month']],
+	];
+	$schema = Database::getConnection()->schema();
+	$schema->createTable('ai_user_daily_login', $spec);
+}
+
+/**
+ * Create ai_user_month_report table.
+ */
+function ai_users_report_update_8002() {
+	$spec = [
+		'fields' => [
+			'urid' => [
+			  'type' => 'serial',
+			  'not null' => TRUE,     
+			  'description' => t('User report ID')
+			],
+			'year' => [
+			  'type' => 'int',
+			  'length' => 5,
+			  'not null' => TRUE,
+			],
+			'month' => [
+			  'type' => 'int',
+			  'length' => 2,
+			  'not null' => false,
+			],
+			'unique_visit' => [
+			  'type' => 'int',
+			  'length' => 7,
+			  'not null' => false,
+			  'description' => t('No of unique visits/registration to AIG in a month'),
+			],
+			'all_visit' => [
+			  'type' => 'int',
+			  'length' => 7,
+			  'not null' => false,
+			  'description' => t('No of visits to AIG in a month'),
+			],
+			'cumulative_unique_visit' => [
+			  'type' => 'int',
+			  'length' => 7,
+			  'not null' => false,
+			  'description' => t('No of cumulative unique visits/registration to AIG (old + new)'),
+			], 
+			'cumulative_visit' => [
+			  'type' => 'int',
+			  'length' => 7,
+			  'not null' => false,
+			  'description' => t('No of cumulative visits to AIG (old + new)'),
+			], 
+			'created_date' => [
+			  'type' => 'int',
+			  'length' => 15,
+			  'not null' => false,
+			  'description' => t('Stores unixtimes of record created'),
+			], 
+			'updated_date' => [
+			  'type' => 'int',
+			  'length' => 15,
+			  'not null' => false,
+			  'description' => t('Stores unixtimes of record updated'),
+			],
+		],
+		'primary key' => ['urid'],
+		'indexes' => ['yearx' => ['year'],'monthx' => ['month']],
+	];
+	$schema = Database::getConnection()->schema();
+	$schema->createTable('ai_user_month_report', $spec);
+}
+/**
+ * Previous record calculation.
+ */
+ function ai_users_report_update_8003() {
+	 
+	 // calculating the records from 2020 Jan month
+	$database = \Drupal::database();
+	$sql_user = "SELECT MONTH(DATE(FROM_UNIXTIME(created))) AS createdMth, YEAR(DATE(FROM_UNIXTIME(created))) AS yr, COUNT(*) AS totalUsers 
+	FROM users_field_data 
+	WHERE created >= '1577836800' 
+	GROUP BY createdMth, yr 
+	ORDER by yr,createdMth ASC";
+    $query_user = $database->query($sql_user);
+    $result_user = $query_user->fetchAll();
+	$values = []; $i = 0;
+	foreach ($result_user as $value_user) {
+		$total_users = ($i == 0)?$value_user->totalUsers:($total_users + $value_user->totalUsers);
+		$values[] = [
+			'year' => $value_user->yr,
+			'month' => $value_user->createdMth,
+			'unique_visit' => $value_user->totalUsers,
+			'cumulative_unique_visit' => $total_users,
+			'all_visit' => 0, // considering the same as new login 
+			'cumulative_visit' => 0, // considering the same   
+			'created_date' => strtotime('today'),
+			'updated_date' => strtotime('today'),
+		];
+		$i++;
+    }
+	$query = $database->insert('ai_user_month_report')
+	->fields(['year', 'month','unique_visit', 'cumulative_unique_visit','all_visit','cumulative_visit','created_date','updated_date']);
+	foreach ($values as $record) {
+	  $query->values($record);
+	}
+	$query->execute();
+ }

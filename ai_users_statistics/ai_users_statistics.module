@@ -1,0 +1,26 @@
+<?php
+
+use Drupal\Component\Render\HtmlEscapedText;
+use Drupal\Core\Url;
+ 
+ /**
+ * Implements hook_preprocess_views_view().
+ */
+ 
+function ai_users_statistics_preprocess_views_view(&$variables) {
+  if ($variables['view']->storage->id() == 'my_content_statistics') {
+	  // loading google chart library specific to the view becasue it was loading multiple time and effecting the other google charts in the site.
+	$url = Url::fromRoute('ai_users_statistics_graph.ajax_graph');
+	$settings = [
+	  'callbackUrl' => $url->toString(),
+	];
+	$variables['#attached']['library'][] = 'ai_users_statistics/google_chart';
+	$variables['#attached']['library'][] = 'ai_users_statistics/statistics';
+	$variables['#attached']['drupalSettings']['ai_users_statistics_graph'] = $settings;
+	$url = Url::fromRoute('ai_users_statistics_duration_graph.ajax_duration_graph');
+	$settings = [
+	  'callbackUrlDuration' => $url->toString(),
+	];
+	$variables['#attached']['drupalSettings']['ai_users_statistics_ajax_duration_graph'] = $settings;
+  }
+}

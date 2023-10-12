@@ -1,0 +1,5 @@
+services:
+  ai_users_report.commands:
+    class: \Drupal\ai_users_report\Commands\AiUsersReportCommands
+    tags:
+      - { name: drush.command }

@@ -1,0 +1,6 @@
+name: Users Report
+description: Alter Users report view
+package: Custom
+type: module
+core_version_requirement: ^8 || ^9
+core: 8.x

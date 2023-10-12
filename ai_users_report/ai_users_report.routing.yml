@@ -1,0 +1,7 @@
+ai_users_report.user_activity:
+  path: '/user-activity/{uid}'
+  defaults:
+    _controller: '\Drupal\ai_users_report\Controller\usersReportController::usersActivityReport'
+    _title: 'User Activity Report'
+  requirements:
+    _permission: 'access content'

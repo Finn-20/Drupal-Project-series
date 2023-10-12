@@ -1,0 +1,4 @@
+ai_user_report:
+  css:
+    theme:
+      css/ai_users_report.css: {}

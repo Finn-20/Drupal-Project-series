@@ -1,0 +1,168 @@
+<?php
+
+/**
+ * @file
+ * The main module file.
+ *
+ * The module to log the login data, and to expose the module to views.
+ */
+
+/**
+ * Implements hook_user_login().
+ */
+function ai_solution_user_report_user_login($account) {
+  // Get the user while login.
+  $login_uid = $account->id();
+  if ($login_uid == '8587') {
+    $database = \Drupal::database();
+
+    // Fetch total new contents per month.
+    $sql = "SELECT MONTH(DATE(FROM_UNIXTIME(created))) AS createdMonth, YEAR(DATE(FROM_UNIXTIME(created))) current_year, COUNT(*) AS totalUsecase
+    FROM node_field_data
+    WHERE created >= '1577836800' and type='use_case_or_accelerator' and status='1'
+    GROUP BY createdMonth, current_year
+  order by createdMonth desc";
+    $query = $database->query($sql);
+    $result = $query->fetchAll();
+    $hits_value = [];
+    $month_value = [];
+    foreach ($result as $value) {
+      $month_value[] = $value->createdMonth;
+      $year_value[] = $value->current_year;
+      $hits_value[] = $value->totalUsecase;
+    }
+    if (!empty($month_value)) {
+      $sql_d = "delete from solution_view_report";
+      $query_1 = $database->query($sql_d);
+    }
+    // Fetch total usecases.
+    $sql_records = "SELECT count(*) as total_rec FROM node_field_data WHERE type='use_case_or_accelerator' and status='1'";
+    $query_total_usecase = $database->query($sql_records);
+    $result_rec = $query_total_usecase->fetchAll();
+    $total_usecase_rec = $result_rec[0]->total_rec;
+    foreach ($hits_value as $c_val) {
+      $total_solution[] = (int) $total_usecase_rec - (int) $c_val;
+      $total_usecase_rec = $total_usecase_rec - $c_val;
+    }
+    // Fetching newly added user month wise.
+    $sql_user = "SELECT MONTH(DATE(FROM_UNIXTIME(created))) AS createdMth, YEAR(DATE(FROM_UNIXTIME(created))) AS yr, COUNT(*) AS totalUsers
+FROM users_field_data
+WHERE created >= '1577836800'
+GROUP BY createdMth, yr
+ORDER by createdMth desc";
+    $query_user = $database->query($sql_user);
+    $result_user = $query_user->fetchAll();
+    $login_user = [];
+
+    foreach ($result_user as $value_user) {
+      $month_user[] = $value_user->createdMth;
+      $year_user[] = $value_user->yr;
+      $login_user[] = $value_user->totalUsers;
+    }
+    // Fetch total users in AIG.
+    $login_val = [];
+    $sql_user_all = "SELECT count(*) as all_users FROM users_field_data";
+    $query_user_all = $database->query($sql_user_all);
+    $result_user_all = $query_user_all->fetchAll();
+    $total_user = $result_user_all[0]->all_users;
+    foreach ($login_user as $login_values) {
+      $login_val[] = (int) $total_user - (int) $login_values;
+      $total_user = $total_user - $login_values;
+
+    }
+    // Total visits to AIG.
+    $visits = [];
+    $months_all = [];
+    $year_all = [];
+    $sql_visits = "SELECT MONTH(DATE(FROM_UNIXTIME(access))) AS createdDate, YEAR(DATE(FROM_UNIXTIME(access))) yr, COUNT(*) AS totalVisits FROM users_field_data WHERE access >= '1577836800' GROUP BY createdDate, yr
+order by createdDate desc";
+    $query_visits = $database->query($sql_visits);
+    $result_visits = $query_visits->fetchAll();
+    foreach ($result_visits as $visits_values) {
+      $visits[] = $visits_values->totalVisits;
+      $months_all[] = $visits_values->createdDate;
+      $year_all[] = $visits_values->yr;
+
+    }
+
+    foreach ($months_all as $key => $mval) {
+      if ($mval == '1') {
+        $months_all[$key] = 'January';
+      }
+      elseif ($mval == '2') {
+        $months_all[$key] = 'February';
+      }
+      elseif ($mval == '3') {
+        $months_all[$key] = 'March';
+      }
+      elseif ($mval == '4') {
+        $months_all[$key] = 'April';
+      }
+      elseif ($mval == '5') {
+        $months_all[$key] = 'May';
+      }
+      elseif ($mval == '6') {
+        $months_all[$key] = 'June';
+      }
+      elseif ($mval == '7') {
+        $months_all[$key] = 'July';
+      }
+      elseif ($mval == '8') {
+        $months_all[$key] = 'August';
+      }
+      elseif ($mval == '9') {
+        $months_all[$key] = 'September';
+      }
+      elseif ($mval == '10') {
+        $months_all[$key] = 'October';
+      }
+      elseif ($mval == '11') {
+        $months_all[$key] = 'November';
+      }
+      elseif ($mval == '12') {
+        $months_all[$key] = 'December';
+      }
+    }
+
+    // Insert records in db.
+    foreach ($months_all as $i => $val) {
+      $hval = 0;
+      $tsl = 0;
+      $sln = 0;
+
+
+      // if (count($month_value) < count($months_all)) {
+      //   array_splice($login_user, 0, 0, 0);
+      //   $sumuser = $login_user[1] + $login_val[0];
+      //   array_splice($login_val, 0, 0, $sumuser);
+      //   $month_value = $months_all;
+      // }
+
+      // Insert the record to table.
+      \Drupal::database()->insert('solution_view_report')
+        ->fields([
+          'year_name',
+          'month_name',
+          'new_logins',
+          'total_users',
+          'new_solutions',
+          'total_solutions',
+          'avg_session',
+          'total_visits',
+        ])
+        ->values([
+          $year_all[$i],
+          $months_all[$i],
+          $login_user[$i],
+          $login_val[$i],
+          $sln,
+          $tsl,
+          $hval,
+          $visits[$i],
+
+        ])
+        ->execute();
+
+    }
+  }
+}

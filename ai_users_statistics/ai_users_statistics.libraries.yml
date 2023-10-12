@@ -1,0 +1,17 @@
+statistics:
+  version: 7.x
+  js:
+    js/ai_users_statistics.js: {}
+google_chart:
+  remote: 'https://www.gstatic.com/charts/loader.js'
+  version: VERSION
+  license:
+    name: 'Apache 2.0'
+    url: 'http://www.apache.org/licenses/LICENSE-2.0'
+    gpl-compatible: false
+  js:
+    /libraries/google_charts/loader.js: {  }
+  dependencies:
+    - core/jquery
+    - core/jquery.once
+    - core/drupal

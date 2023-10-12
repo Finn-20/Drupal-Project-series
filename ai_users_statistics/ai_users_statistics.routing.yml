@@ -1,0 +1,24 @@
+ai_users_statistics_graph.ajax_graph:
+  path: '/ai_users_statistics/ajax'
+  defaults:
+    _controller: '\Drupal\ai_users_statistics\Controller\usersStatisticsController::usersStatisticsAjaxgraph'
+  requirements:
+    _permission: 'access content'
+ai_users_statistics_duration_graph.ajax_duration_graph:
+  path: '/ai_users_statistics/ajax_duration'
+  defaults:
+    _controller: '\Drupal\ai_users_statistics\Controller\usersStatisticsController::usersStatisticsAjaxDurationgraph'
+  requirements:
+    _permission: 'access content'
+ai_users_statistics_csv_report.staticstics_download:
+  path: '/exports/statistics/{asset_type}'
+  defaults:
+    _controller: '\Drupal\ai_users_statistics\Controller\CSVReport::build'
+  requirements:
+    _permission: 'access content'
+ai_users_statistics_asset_csv_report.single_staticstics_download:
+  path: '/asset/statistics/{nid}'
+  defaults:
+    _controller: '\Drupal\ai_users_statistics\Controller\CSVReport::singleAssetBuild'
+  requirements:
+    _permission: 'access content'

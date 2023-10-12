@@ -1,0 +1,4 @@
+administer site configuration:
+  title: Administer site configuration settings
+  description: Allow the admin user to do the site specific feature configuration
+  restrict access: true

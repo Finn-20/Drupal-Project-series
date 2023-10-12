@@ -1,0 +1,7 @@
+ai_solution_user_report.solution_activity:
+  path: '/solution-activity/{nid}'
+  defaults:
+    _controller: '\Drupal\ai_solution_user_report\Controller\solutionUserReportController::solutionActivityReport'
+    _title: 'Asset Activity Report'
+  requirements:
+    _permission: 'access content'
