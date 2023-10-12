@@ -1,0 +1,41 @@
+ai_account.create_new:
+  path: '/users/notifications'
+  defaults:
+    _form: '\Drupal\ai_account\Form\AiaccountNotificationForm'
+    _title: 'AI Account Notifications'
+  requirements:
+    _permission: 'access content'
+
+ai_account.config:
+  path: 'admin/config/content/ai_account_termfav_notify/config'
+  defaults:
+    _form: '\Drupal\ai_account\Form\AIFavNotifyConfigForm'
+    _title: 'Account Terms Notification Configurations'
+  requirements:
+    _permission: 'administer notification content'
+    
+ai_account.newsletterlist:
+  path: '/newsletterlist'
+  defaults:
+    _form: '\Drupal\ai_account\Form\NewsletterListForm'
+  requirements:
+    _permission: 'access content'
+
+ai_account.newslettersublist:
+  path: '/users/newsletterlist'
+  defaults:
+    _controller: '\Drupal\ai_account\Controller\NewsletterListController::newslettersublist'
+    _title: 'Newsletter Subscription'
+  requirements:
+    _permission: 'access content'
+    
+ai_account.createexternaluser:
+  path: '/create_externaluser'
+  defaults:
+    _form: '\Drupal\ai_account\Form\CreateExternalUser'
+    _title: 'Create External User'
+  requirements:
+    _permission: 'access content'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'

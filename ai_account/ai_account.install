@@ -1,0 +1,15 @@
+<?php
+
+/**
+ * Set the default configuration for the asset notification settings.
+ */
+function ai_account_update_8001() {
+  $config = \Drupal::configFactory();
+  // Setting up the default configuration.
+  $notification_config = $config->getEditable('ai_account_notifications.settings');
+  $notification_config->set('notification_duration', '+6 month');
+  $notification_config->set('notification_display_text', '"Your asset has not been updated for more than 6 months now, please update it soon" - Click on the EDIT button.');
+  $notification_config->set('popup_notification_display_text', 'Update your previously added asset.');
+
+  $notification_config->save(TRUE);
+}

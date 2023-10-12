@@ -1,0 +1,168 @@
+<?php
+
+/**
+ * @file
+ * AIAccount File Doc Comment.
+ *
+ */
+use Drupal\user\Entity\User;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\node\Entity\Node;
+use Drupal\taxonomy\Entity\Term;
+use Drupal\ai_account\Services\AIAccountNotifyFavoriteService;
+use Drupal\user_notification\UserNotificationStorage;
+
+/**
+ * Implements hook_form_alter().
+ */
+function ai_account_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+  $user_id = \Drupal::currentUser()->id();
+  $user = \Drupal::currentUser()->getRoles();
+  $roles_to_check_for = array('cap_authenticated', 'creator');
+  $check_roles = array_diff($user, ['authenticated']);
+  if (in_array("creator", $user) && $form_id == 'user_form') {
+    $form['account']['mail']['#attributes']['disabled'] = 'disabled';
+    $form['account']['name']['#attributes']['disabled'] = 'disabled';
+    $form['account']['pass']['#access'] = FALSE;
+    $form['account']['current_pass']['#access'] = FALSE;
+    $form['account']['status']['#access'] = FALSE;
+    $form['account']['roles']['#access'] = FALSE; 
+  }
+  if ($form_id == 'user_form'){
+    if (array_diff($check_roles, $roles_to_check_for)) {
+      $form['field_profile_group']['#access'] = TRUE;
+    }
+    else {
+	  $form['field_profile_group']['#access'] = FALSE;  
+    }
+  }
+}
+
+
+/**
+ * Implements hook_mail().
+ */
+function ai_account_mail($key, &$message, $params) {
+  $options = [
+    'langcode' => $message['langcode'],
+  ];
+
+  $from = isset($message['reply-to']) ? $message['reply-to'] : \Drupal::config('system.site')->get('mail');
+  $message['from'] = $from;
+  $message['Return-Path'] = $from;
+  $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+  $message['headers']['Return-Path'] = $from;
+  $message['headers']['From'] = $from;
+  $message['headers']['Sender'] = $from;
+  // Print "<pre>"; print_r($from); print "</pre>"; die;.
+  if (isset($params['bcc']) && !empty($params['bcc'])) {
+    $message['headers']['bcc'] = $params['bcc'];
+    $email_body = _ai_account_get_subscription_email_body($params);
+    if (!empty($email_body)) {
+      switch ($key) {
+        case 'ai_account_notify_term_favorite':
+          $message['subject'] = '[Data and AI Gallery]: New use case added of your interest.';
+          $message['body'][] = $email_body;
+          break;
+      }
+    }
+  }
+}
+
+/**
+ *
+ */
+function _ai_account_get_subscription_email_body($params) {
+  $notify_users = '';
+  if (!empty($params)) {
+
+    $notify_users .= 'Hello Subscriber,<br/>
+      A new use case added in Data and AI Gallery belongs to Industry/Domain for which you subscribed for.<br/>Please see below details to find out more:<br/>';
+
+    $notify_users .= '<ul>
+        <li><strong>Use case Title:</strong> ' . $params['node_title'] . '</li>
+        <li><strong>Use case URL:</strong> ' . $params['node_url'] . '</li>';
+
+    if (isset($params['industry']) && !empty($params['industry'])) {
+      $notify_users .= '<li><strong><u>Industry:</u></strong> <br/><ul>';
+      foreach ($params['industry'] as $industry) {
+        $notify_users .= '<li>' . $industry . '</li>';
+      }
+      $notify_users .= '</ul></li>';
+    }
+
+    if (isset($params['domains']) && !empty($params['domains'])) {
+      $notify_users .= '<li><strong><u>Domains:</u></strong><br/><ul>';
+      foreach ($params['domains'] as $domain) {
+        $notify_users .= '<li>' . $domain . '</li>';
+      }
+      $notify_users .= '</ul></li>';
+    }
+    $notify_users .= '</ul>';
+  }
+
+  return $notify_users;
+}
+
+
+/**
+* Notify user
+*/
+function _ai_account_subscriber_notification($node){
+  // 1. get all user for published asset selected industry n domain
+  $select = \Drupal::database()->select('node_field_data', 'nfd');
+  $select->addExpression('fn.entity_id','domain_userid');
+  $select->addExpression('fni.entity_id','industry_userid');
+  $select->condition('nfd.status', 1)->condition('nfd.nid',$node->id());
+
+  $select->leftJoin('node__field_usecase_domain', 'ud', 'ud.entity_id = nfd.nid');
+  $select->leftJoin('user__field_favorite_terms', 'fn', 'fn.field_favorite_terms_target_id = ud.field_usecase_domain_target_id');
+
+  $select->leftJoin('node__field_usecase_industry', 'ui', 'ui.entity_id = nfd.nid');
+  $select->leftJoin('user__field_favorite_industries_notifi', 'fni', 'fni.field_favorite_industries_notifi_target_id = ui.field_usecase_industry_target_id');
+
+  $results = $select->execute()->fetchAll();
+
+  $subscribed_user = [];
+  if(!empty($results)) {
+    $uuid_service = \Drupal::service('uuid');
+    $created_date = time();
+    foreach ($results as $result) {
+      if($result->domain_userid){
+        // 2. Check auther is there in selected list
+        if($result->domain_userid == $node->getOwnerId()){
+          // 3. dont send notification to onwer of asset
+          continue;
+        }
+        $subscribed_user[$result->domain_userid] = [
+          'title' => $node->getTitle(),
+          'entity_id' => $node->id(),
+          'entity_type' => $node->bundle(),
+          'status' => 1,
+          'operation' => 'Subscriber',
+          'uid' => $result->domain_userid,
+          'uuid' => $uuid_service->generate(),
+          'created' => $created_date
+        ]; 
+      }
+      if($result->industry_userid){
+        // 2. Check auther is there in selected list
+        if($result->industry_userid == $node->getOwnerId()){
+          // 3. dont send notification to onwer of asset
+          continue;
+        }
+        $subscribed_user[$result->industry_userid] = [
+          'title' => $node->getTitle(),
+          'entity_id' => $node->id(),
+          'entity_type' => $node->bundle(),
+          'status' => 1,
+          'operation' => 'Subscriber',
+          'uid' => $result->industry_userid,
+          'uuid' => $uuid_service->generate(),
+          'created' => $created_date
+        ]; 
+      }
+    }
+    UserNotificationStorage::bulkInsert($subscribed_user);
+  }
+}

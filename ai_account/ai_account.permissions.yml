@@ -1,0 +1,4 @@
+administer notification content:
+  title: Administer Notification Settings
+  description: Provides the notification Settings
+  restrict access: true
