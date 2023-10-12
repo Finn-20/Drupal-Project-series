@@ -1,0 +1,15 @@
+ai_field_migrations.migrate_collateral:
+  path: '/admin/config/content/ai_field_migrations/collateralmigrate'
+  defaults:
+    _form: '\Drupal\ai_field_migrations\Form\MigrateCollateralForm'
+    _title: 'Collateral Migration'
+  requirements:
+    _permission: 'administer content'
+ai_field_migrations.migrate_primary_industry_domain:
+  path: '/admin/config/content/ai_field_migrations/migrate/primary_industry_domain'
+  defaults:
+    _form: '\Drupal\ai_field_migrations\Form\MigratePrimaryIndustryDomainForm'
+    _title: 'Primary Industry Domain Migration'
+  requirements:
+    _permission: 'administer content'
+    

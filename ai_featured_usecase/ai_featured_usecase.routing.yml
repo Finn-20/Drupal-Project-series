@@ -1,0 +1,7 @@
+ai_featured_usecase.modify_featured:
+  path: 'modify_featured_usecase/{nid}/{value}'
+  defaults:
+    _controller: '\Drupal\ai_featured_usecase\Controller\AIFeaturedUsecaseController::modifyFeaturedUsecase'
+  requirements:
+    _permission: 'administer content'
+ 

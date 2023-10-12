@@ -1,0 +1,51 @@
+<?php
+
+use Drupal\views\ViewExecutable;
+use Drupal\node\Entity\Node;
+/**
+ * Implements hook_views_pre_render().
+ */
+function ai_featured_usecase_views_pre_render(ViewExecutable $view) {
+  if (isset($view) && in_array($view->storage->id(), ['what_s_new']) && $view->current_display == 'add_remove_featured') {
+    $view->element['#attached']['library'][] = 'ai_featured_usecase/ai_featured_usecase_library';
+  }
+}
+/**
+ * Prepares variables for views field templates.
+ *
+ * Default template: views-view-field.html.twig.
+ *
+ * @param array $variables
+ *   An associative array containing:
+ *   - field: The field handler object for the current field.
+ *   - row: Object representing the raw result of the SQL query for the current
+ *     field.
+ *   - view: Instance of the ViewExecutable object for the parent view.
+ */
+function ai_featured_usecase_preprocess_views_view_field(&$variables) {
+  if (isset($variables['view']) && in_array($variables['view']->storage->id(), ['what_s_new']) && $variables['view']->current_display == 'add_remove_featured') {
+    if ($variables['field']->field == 'field_featured_usecase') {
+      if (null != $variables['row']->_entity && $variables['row']->_entity instanceof Node) {
+        $nid = $variables['row']->nid;
+        $field_featured_usecase = $variables['row']->_entity->get('field_featured_usecase')->getValue();
+        $checked = '';
+        $selected = 'no';
+        if (isset($field_featured_usecase[0]['value']) && $field_featured_usecase[0]['value']) {
+          $checked = ' checked';
+          $selected = 'yes';
+        }
+        $module_path = drupal_get_path('module', 'ai_featured_usecase');
+        $markup = '<input class="add-to-featured" id="add-to-featured-' . $nid . '" type="checkbox" name="featured-usecase" value="' . $nid . '" data-selected-value="' . $selected . '"' . $checked . '>
+          <span id="spinner-' . $nid . '" class="spinner">
+            <img src="/' . $module_path . '/assets/images/spinner.gif" />
+          </span>';
+
+        $variables['output'] = [
+          '#type' => 'markup',
+          '#markup' => $markup,
+          '#allowed_tags' => ['input','span', 'img'],
+        ];
+      }
+    }
+  }
+}

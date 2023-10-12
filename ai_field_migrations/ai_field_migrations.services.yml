@@ -1,0 +1,7 @@
+services:
+  ai_field_migrations.aiFieldMigrationService:
+    class: Drupal\ai_field_migrations\Services\AiFieldMigrationService
+    arguments: ['@config.factory', '@database', '@messenger', '@state', '@entity.manager', '@path.alias_manager', '@request_stack']
+  logger.channel.ai_field_migrations:
+    parent: logger.channel_base
+    arguments: ['ai_field_migrations']

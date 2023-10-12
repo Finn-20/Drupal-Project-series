@@ -1,0 +1,5 @@
+ai_featured_usecase_library:
+  js:
+    assets/js/ai_featured_usecase.js: {}
+  dependencies:
+    - core/jquery

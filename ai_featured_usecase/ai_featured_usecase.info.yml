@@ -1,0 +1,6 @@
+name: AI Featured Usecase
+description: Add/Remove use cases as featured.
+package: Custom
+type: module
+version: 1.0
+core: 8.x

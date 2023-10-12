@@ -1,0 +1,112 @@
+<?php
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\node\Entity\Node;
+use Drupal\taxonomy\Entity\Term;
+/** 
+ * Migrate current terms into enabled mode
+ **/
+
+function _ai_field_migrations_migrate_terms_table(){
+	$vocabs = ['ai_features','tech_stacks','frameworks'];
+	$x = [];
+	foreach ($vocabs as $vid) {
+		$terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vid);
+		foreach ($terms as $term) { 
+			$x[$term->tid] = $term->name;
+			$taxonomy_term = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($term->tid);
+			$term_val = $taxonomy_term->get('field_term_status')->value;
+			if($term_val == NULL){
+				$taxonomy_term->field_term_status->setValue(1);
+			}
+			$taxonomy_term->Save();
+		}
+	}
+}
+
+
+/** 
+ * Migrate solutions field table value from paragraph to node 
+ **/
+function _ai_field_migrations_migrate_field_table($source_table, $destination_table) {
+  $query = db_select($source_table, 's');
+  $query->fields('s')
+  ->fields('d', ['parent_id']);
+  $query->innerJoin('paragraphs_item_field_data', 'd', 'd.id = s.entity_id');
+  
+  $results = $query->execute()->fetchAll();
+  
+  $data = [];
+  foreach ($results as $result) {
+    $node_data = [];
+    if (isset($result) && !empty($result)) {
+      foreach ($result as $key => $value) {
+        if ($key == 'entity_id')
+          continue;
+        
+        if ($key == 'bundle') {
+          $value = 'use_case_or_accelerator';
+        }
+        
+        if ($key == 'parent_id') {
+          $node_data['entity_id'] = $value;
+        }
+        else {
+          $node_data[$key] = $value;
+        }
+      }
+    }
+    if (!empty($node_data)) {
+      try {
+        $return_value = db_insert($destination_table)
+        ->fields($node_data)
+        ->execute();
+      }
+      catch (\Exception $e) {
+        drupal_set_message(t('db_insert failed. Message = %message, query= %query', [
+        '%message' => $e->getMessage(),
+        '%query' => $e->query_string,
+        ]
+        ), 'error');
+      }
+    }
+  } 
+}
+
+
+/**
+ * Migrate solutions field table value from paragraph to node
+ **/
+function _ai_field_migrations_insert_comment_field_default_value($source_table, $destination_table) {
+  $query = db_select($source_table, 's');
+  $query->fields('s', ['nid', 'vid']);
+
+  $results = $query->execute()->fetchAll();
+
+  $data = [];
+  foreach ($results as $result) {
+    $node_data = [];
+    if (isset($result) && !empty($result)) {
+      $node_data['entity_id'] = $result->nid;
+      $node_data['revision_id'] = $result->vid;
+      $node_data['bundle'] = 'use_case_or_accelerator';
+      $node_data['deleted'] = '0';
+      $node_data['langcode'] = 'en';
+      $node_data['delta'] = '0';
+      $node_data['comment_status'] = '2';
+    }
+    if (!empty($node_data)) {
+      try {
+        $return_value = db_insert($destination_table)
+        ->fields($node_data)
+        ->execute();
+      }
+      catch (\Exception $e) {
+        drupal_set_message(t('db_insert failed. Message = %message, query= %query', [
+        '%message' => $e->getMessage(),
+        '%query' => $e->query_string,
+        ]
+        ), 'error');
+      }
+    }
+  }
+}

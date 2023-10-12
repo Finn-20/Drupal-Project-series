@@ -1,0 +1,96 @@
+<?php
+ function ai_field_migrations_install() { 
+
+   // Category Field
+   /* _ai_field_migrations_migrate_field_table('paragraph__field_category', 'node__field_category');
+   _ai_field_migrations_migrate_field_table('paragraph_revision__field_category', 'node_revision__field_category');
+ */
+   
+   // Industry Field
+   /* _ai_field_migrations_migrate_field_table('paragraph__field_usecase_industry', 'node__field_usecase_industry');
+   _ai_field_migrations_migrate_field_table('paragraph_revision__field_usecase_industry', 'node_revision__field_usecase_industry');
+    */ 
+   
+   // Domain Field
+   /* _ai_field_migrations_migrate_field_table('paragraph__field_usecase_domain', 'node__field_usecase_domain');
+   _ai_field_migrations_migrate_field_table('paragraph_revision__field_usecase_domain', 'node_revision__field_usecase_domain');
+    */ 
+   
+   // Offer Field
+   /* _ai_field_migrations_migrate_field_table('paragraph__field_offer', 'node__field_offer');
+   _ai_field_migrations_migrate_field_table('paragraph_revision__field_offer', 'node_revision__field_offer');
+ */
+   // AI Features Field
+   /* _ai_field_migrations_migrate_field_table('paragraph__field_usecase_aifeatures', 'node__field_usecase_aifeatures');
+   _ai_field_migrations_migrate_field_table('paragraph_revision__field_usecase_aifeatures', 'node_revision__field_usecase_aifeatures');
+    */ 
+   
+   // Partner Field
+   /* _ai_field_migrations_migrate_field_table('paragraph__field_usecase_technology', 'node__field_usecase_technology');
+   _ai_field_migrations_migrate_field_table('paragraph_revision__field_usecase_technology', 'node_revision__field_usecase_technology');
+    */ 
+   
+   // Framework Field
+   /* _ai_field_migrations_migrate_field_table('paragraph__field_usecase_framework', 'node__field_usecase_framework');
+   _ai_field_migrations_migrate_field_table('paragraph_revision__field_usecase_framework', 'node_revision__field_usecase_framework');
+    */ 
+   
+   // Tags Field
+   /* _ai_field_migrations_migrate_field_table('paragraph__field_usecase_tags', 'node__field_usecase_tags');
+   _ai_field_migrations_migrate_field_table('paragraph_revision__field_usecase_tags', 'node_revision__field_usecase_tags');
+    */ 
+   
+  // Solution Field
+  /* _ai_field_migrations_migrate_field_table('paragraph__field_solution', 'node__field_solution');
+  _ai_field_migrations_migrate_field_table('paragraph_revision__field_solution', 'node_revision__field_solution');
+  
+  // Scope Field
+  _ai_field_migrations_migrate_field_table('paragraph__field_scope', 'node__field_scope');
+  _ai_field_migrations_migrate_field_table('paragraph_revision__field_scope', 'node_revision__field_scope');
+  
+  
+  // Associated Image
+  _ai_field_migrations_migrate_field_table('paragraph__field_associated_image', 'node__field_associated_image');
+  _ai_field_migrations_migrate_field_table('paragraph_revision__field_associated_image', 'node_revision__field_associated_image');
+  
+  // Collaterals
+  _ai_field_migrations_migrate_field_table('paragraph__field_collaterals_files_upload', 'node__field_collaterals_files_upload');
+  
+  // Link Asset
+  _ai_field_migrations_migrate_field_table('paragraph__field_link_asset', 'node__field_link_asset');
+  _ai_field_migrations_migrate_field_table('paragraph_revision__field_link_asset', 'node_revision__field_link_asset');
+  
+  
+  // Star Rating
+  _ai_field_migrations_migrate_field_table('paragraph__field_rate', 'node__field_rate');
+  _ai_field_migrations_migrate_field_table('paragraph_revision__field_rate', 'node_revision__field_rate'); */
+  
+  
+  // Owner Details
+  /* Primary Owner Contact */
+  /* _ai_field_migrations_migrate_field_table('paragraph__field_usecase_primary_ownet_cnt', 'node__field_usecase_primary_ownet_cnt'); */
+  
+  /* Primary Owner Email */
+  /* _ai_field_migrations_migrate_field_table('paragraph__field_use_case_primary_owner_ema', 'node__field_use_case_primary_owner_ema'); */
+  
+  /* Primary Owner Name */
+  /* _ai_field_migrations_migrate_field_table('paragraph__field_use_case_primary_owner_nam', 'node__field_use_case_primary_owner_nam'); */
+  
+  /* Secondary Owner Contact */
+  /* _ai_field_migrations_migrate_field_table('paragraph__field_usecase_secon_owner_cn', 'node__field_usecase_secon_owner_cn');
+  _ai_field_migrations_migrate_field_table('paragraph_revision__field_usecase_secon_owner_cn', 'node_revision__field_usecase_secon_owner_cn'); */
+  
+  /* Secondary Owner Email */
+  /* _ai_field_migrations_migrate_field_table('paragraph__field_usecase_secn_owner_email', 'node__field_usecase_secn_owner_email'); */
+  
+  /* Secondary Owner Name */
+  /* _ai_field_migrations_migrate_field_table('paragraph__field_usecase_secn_owner_name', 'node__field_usecase_secn_owner_name'); */
+
+  /*  Taxonomy Terms */
+  // _ai_field_migrations_migrate_terms_table(); 
+
+   
+  /** Populate Comment field for all usecases **/
+   _ai_field_migrations_insert_comment_field_default_value('node_field_data', 'node__comment');
+   _ai_field_migrations_insert_comment_field_default_value('node_field_data', 'node_revision__comment');
+ } 
