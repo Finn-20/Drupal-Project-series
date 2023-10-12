@@ -1,0 +1,33 @@
+ai_contribute:
+  css:
+    theme:
+      css/media-library.css: {}
+      build/css/intlTelInput.css: {}
+  js:
+    js/ai_contribute_usecase.js: {}
+    build/js/intlTelInput.js: {}
+    js/utils.js: {}
+  dependencies:
+    - core/jquery
+    
+ai_contribute_sevenui:  
+  js:
+    js/ai_seven_ui.js: {}
+  dependencies:
+    - core/jquery
+
+ai_contribute_tooltip:  
+  js:
+    js/ai_tooltip.js: {}
+
+ai_email_validate:  
+  js:
+    js/ai_email_validate.js: {}
+  dependencies:
+    - core/jquery
+    - core/drupal
+    - core/drupalSettings
+
+other_field:
+  js:
+    js/ai_other_field.js: {}

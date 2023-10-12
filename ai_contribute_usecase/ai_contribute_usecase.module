@@ -1,0 +1,1267 @@
+<?php
+
+/**
+ * @file
+ * Ai contribute module.
+ */
+use Drupal\user\Entity\User;
+use Drupal\Core\Render\Element;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Component\Utility\Unicode;
+use Drupal\taxonomy\Entity\Term;
+use Drupal\image\Entity\ImageStyle;
+use Drupal\Core\Url;
+use Drupal\media\Entity\Media;
+use Drupal\Core\Asset\file_create_url;
+use Drupal\file\Entity\File;
+use Drupal\node\Entity\Node;
+use Drupal\node\NodeInterface;
+use Drupal\Core\Ajax\AjaxResponse;
+use Drupal\Core\Ajax\ChangedCommand;
+use Drupal\Core\Ajax\CssCommand;
+use Drupal\Core\Ajax\HtmlCommand;
+use Drupal\Core\Ajax\InvokeCommand;
+use Drupal\Core\Ajax\ReplaceCommand;
+use Drupal\Core\Ajax\OpenModalDialogCommand;
+use Drupal\Component\Serialization\Json;
+use Drupal\Component\Utility\Html;
+use Drupal\Component\Render\PlainTextOutput;
+use Drupal\ai_content_notifications\Services\AIContentNotificationService;
+use Drupal\ai_utility\Services\AiUtilityService;
+use Drupal\ai_contribute_usecase\AiOtherFieldStorage;
+use Drupal\Core\TempStore\PrivateTempStoreFactory;
+use Drupal\ai_checklist\AccessChecks\ChecklistAccessCheck;
+/**
+ * Implements hook_theme().
+ */
+function ai_contribute_usecase_theme($existing, $type, $theme, $path) {
+  return [
+    'ai_usecase_accelerator_page' => [
+      'variables' => [
+        'usecase_or_accelerator' => NULL,
+        'author_contributor_name' => NULL,
+        'business_driver_d' => NULL,
+        'solution_data' => NULL,
+        'demo_video' => NULL,
+        'usecase_link' => NULL,
+        'content_field_rate' => NULL,
+        'node_stats' => NULL,
+        'comment_count' => NULL,
+        'comment_title' => NULL,
+        'filearray' => NULL,
+        'contact_owner_email' => NULL,
+        'contact_owner_name' => NULL,
+        'owner_linkedin' => NULL,
+        'usecase_tags' => NULL,
+        'node_title' => NULL,
+        'have_demonstration' => NULL,
+        'demo_script_filesrc' => NULL,
+        'demo_script_filename' => NULL,
+        'associated_image' => NULL,
+        'moderation_state' => NULL,
+        'disclaimer' => NULL,
+        'archive_rating' => NUll,
+        'archive_votes' => NULL
+      ]
+    ],
+    'ai_usecase_accelerator_preview_page' => [
+      'variables' => [
+        'usecase_or_accelerator' => NULL,
+        'author_contributor_name' => NULL,
+        'business_driver_d' => NULL,
+        'solution_data' => NULL,
+        'demo_video' => NULL,
+        'usecase_link' => NULL,
+        'filearray' => NULL,
+        'contact_owner_email' => NULL,
+        'contact_owner_name' => NULL,
+        'owner_linkedin' => NULL,
+        'usecase_tags' => NULL,
+        'node_title' => NULL,
+        'have_demonstration' => NULL,
+        'demo_script_filesrc' => NULL,
+        'demo_script_filename' => NULL,
+        'associated_image' => NULL,
+      ],
+    ],
+    'ai_usecase_bulk_email_template' => [
+      'variables' => [
+        'header' => NULL,
+        'rows' => NULL,
+      ],
+    ],
+  ];
+}
+
+/**
+ * To get taxonomy tags for preview.
+ */
+function _aigallery_get_usecase_tags_preview($tags) {
+  $taxonomy_fields = [
+    'field_usecase_industry' => 'browse_all_industry_2_0',
+    'field_usecase_domain' => 'browse_all_domain_2_0',
+    'field_offer' => 'browse_all_offer_2_0',
+    'field_category' => 'browse_all_category_2_0',
+    'field_usecase_aifeatures' => 'browse_all_ai_features_2_0',
+    'field_usecase_framework' => 'browse_all_framework_2_0',
+    'field_usecase_technology' => 'browse_all_partner_2_0',
+  ];
+  $associated_tids = [];
+  if (NULL != $tags) {
+    foreach ($taxonomy_fields as $field => $filter_name) {
+      if (isset($tags[$field]) && !empty($tags[$field])) {
+        foreach ($tags[$field] as $tag) {
+          $details = [];
+          if (empty($associated_tids[$tag['target_id']])) {
+            $term_status = 1;
+            $term_details = Term::load($tag['target_id']);
+            if (!empty($term_details)) {
+              $voc_get = $term_details->getVocabularyId();
+              $vocabs = ['ai_features', 'tech_stacks', 'frameworks'];
+              $is_vocab = in_array($voc_get, $vocabs);
+              if ($is_vocab) {
+                $term_status = $term_details->get('field_term_status')->value;
+              }
+              // Check term name.
+              $term_names = $term_details->getName();
+              if ($term_status && $term_names != 'N/A') {
+                $details = [
+                  'term_name' => $term_details->getName(),
+                  //'redirect_url' => Url::fromUri('internal:/ai-browse-all-search', ['query' => ['ai-browse-all[0]' => $filter_name . ':' . $term_ref['target_id']]]),
+                ];
+                $associated_tids[$tag['target_id']] = $details;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return $associated_tids;
+}
+
+/**
+ * To get taxonomy tags.
+ */
+function _aigallery_get_usecase_tags($node) {
+  $taxonomy_fields = [
+    'field_usecase_industry' => 'browse_all_industry_2_0',
+    'field_usecase_domain' => 'browse_all_domain_2_0',
+    'field_offer' => 'browse_all_offer_2_0',
+    'field_category' => 'browse_all_category_2_0',
+    'field_usecase_aifeatures' => 'browse_all_ai_features_2_0',
+    'field_usecase_framework' => 'browse_all_framework_2_0',
+    'field_usecase_technology' => 'browse_all_partner_2_0',
+  ];
+
+  $associated_tids = [];
+
+  if (NULL != $node) {
+    $node_ref = $node->toArray();
+    foreach ($taxonomy_fields as $field => $filter_name) {
+      if (isset($node_ref[$field]) && !empty($node_ref[$field])) {
+        foreach ($node_ref[$field] as $term_ref) {
+          $details = [];
+          if (isset($term_ref['target_id']) && !empty($term_ref['target_id'])) {
+            if (!isset($associated_tids[$term_ref['target_id']]) || empty($associated_tids[$term_ref['target_id']])) {
+              $term_status = 1;
+              $term_details = Term::load($term_ref['target_id']);
+              if (!empty($term_details)) {
+                $voc_get = $term_details->getVocabularyId();
+                $vocabs = ['ai_features', 'tech_stacks', 'frameworks'];
+                $is_vocab = in_array($voc_get, $vocabs);
+                if ($is_vocab) {
+                  $term_status = $term_details->get('field_term_status')->value;
+                }
+                // Check term name.
+                $term_names = $term_details->getName();
+                if ($term_status && $term_names != 'N/A') {
+                  $details = [
+                    'term_name' => $term_details->getName(),
+                    'redirect_url' => Url::fromUri('internal:/ai-browse-all-search', ['query' => ['ai-browse-all[0]' => $filter_name . ':' . $term_ref['target_id']]]),
+                  ];
+                  $associated_tids[$term_ref['target_id']] = $details;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return $associated_tids;
+}
+
+/**
+ * Implements default internal fields
+ */
+function _aigallery_show_default_internal_field($node, &$vars, &$filearray) {
+  $vars['business_driver_d'] = $node->get('body')->value;
+  $vars['solution_data'] = $node->get('field_solution')->value;
+  $have_demonstration = $node->get('field_have_demonstration')->value;
+  $have_demo_video = $node->get('field_demo_video')->value;
+  $have_usecase_video = $node->get('field_have_video_usecase')->value;
+
+  if (strtolower($have_demonstration) == 'yes') {
+    _aigallery_demonstration_details($node, $vars);
+  }
+  if (strtolower($have_demo_video) == 'yes') {
+    _aigallery_show_internal_field('demo_video', $node, $vars);
+  }
+  if ((strtolower($have_usecase_video) == 'yes')) {
+    if (empty($vars['demo_link'])) {
+      _aigallery_show_internal_field('usecase_video', $node, $vars);
+    }
+    elseif (!(empty($vars['demo_link'])) && (strtolower($have_demo_video) == 'yes')) {
+      _aigallery_usecase_video($node, $vars, $filearray);
+    }
+  }
+}
+
+/**
+ * Callback function to get user name in firstname lastname format.
+ */
+function _aigallery_get_user_formatted_name($uid) {
+  $member = User::load($uid);
+  $firstName = (NULL != $member->field_first_name->value) ? Unicode::ucfirst(Unicode::strtolower($member->field_first_name->value)) : '';
+  $lastName = (NULL != $member->field_las->value) ? Unicode::ucfirst(Unicode::strtolower($member->field_las->value)) : '';
+  $name = '';
+  if ((NULL != $firstName) && (NULL != $lastName)) {
+    $name = t('@first_name @last_name', [
+      '@first_name' => $firstName,
+      '@last_name' => $lastName,
+    ]);
+  }
+  elseif ((NULL == $firstName) && NULL != $lastName) {
+    $name = t('@last_name', ['@last_name' => $lastName]);
+  }
+  elseif ((NULL != $firstName) && NULL == $lastName) {
+    $name = t('@first_name', ['@first_name' => $firstName]);
+  }
+  return $name;
+}
+
+/**
+ * Implements internal fields
+ */
+function _aigallery_show_internal_field($case, $node, &$vars) {
+  switch ($case) {
+    case 'demo_video':
+      $demo_video_link = isset($node->get('field_demo_video_link')->target_id) ? $node->get('field_demo_video_link')->target_id : '';
+      if (!empty($demo_video_link)) {
+        $vars['demo_link'] = $node->get('field_demo_video_link')->target_id;
+      }
+      break;
+
+    case 'usecase_video':
+      $usecase_video_link = isset($node->get('field_usecase_video_link')->target_id) ? $node->get('field_usecase_video_link')->target_id : '';
+      if (!empty($usecase_video_link)) {
+        $vars['usecase_link'] = $node->get('field_usecase_video_link')->target_id;
+      }
+      break;
+  }
+}
+
+/**
+ * Implements common usecase video function for internal and external field
+ */
+function _aigallery_usecase_video($node, &$vars, &$filearray, $external = FALSE) {
+  $usecase_link_yes = $node->get('field_usecase_video_link')->target_id;
+  if ($external) {
+    $usecase_link_yes = $node->get('field_usecase_video_modified_')->target_id;
+  }
+  $usecase_video_media = Media::load($usecase_link_yes);
+  if ($usecase_video_media) {
+    $usecase_video_targetid = $usecase_video_media->get('field_media_video_file')->getValue();
+    $uvfid = $usecase_video_targetid[0]['target_id'];
+    $use_video_file = File::load($uvfid);
+    $use_video_fileSRC = file_create_url($use_video_file->getFileUri());
+    $use_video_file_fileName = $use_video_file->getFilename();
+    $use_video_file_fileSize = $use_video_file->getSize();
+    $use_video_file_split_filename = explode('.', $use_video_file_fileName);
+    $use_video_link_arr['fileurl'] = $use_video_fileSRC;
+    $use_video_link_arr['fullfileName'] = $use_video_file_fileName;
+    $use_video_link_arr['fileName'] = (strlen($use_video_file_fileName) > 20) ? substr($use_video_file_fileName, 0, 20) . '...' : $use_video_file_fileName;
+    $use_video_link_arr['fileSize'] = format_size($use_video_file_fileSize);
+    $use_video_link_arr['fileext'] = strtolower($use_video_file_split_filename[count($use_video_file_split_filename) - 1]);
+    $use_video_link_arr['class'] = 'collaterals-file';
+    $filearray['usecase_link_yes'] = $use_video_link_arr;
+    $vars['usecase_link']['fileurl'] = $use_video_fileSRC;
+  }
+}
+
+/**
+ * Implements common video link function for internal and external field
+ */
+function _aigallery_demo_video($node, &$vars, $external = FALSE) {
+  $demovideo = $node->get('field_demo_video_link')->target_id;
+  if ($external) {
+    $demovideo = $node->get('field_demo_video_modified_')->target_id;
+  }
+  $demovideo_media = Media::load($demovideo);
+
+  $demovideo_targetid = $demovideo_media->get('field_media_video_file')->getValue();
+  $uvfid = $demovideo_targetid[0]['target_id'];
+  $demo_video_file = File::load($uvfid);
+  $vars['demo_video']['fileurl'] = file_create_url($demo_video_file->getFileUri());
+
+  $associated_image = $node->get('field_associated_image')->target_id;
+  $uvfid = $field_associated_targetid[0]['target_id'];
+
+  $associated_image_file = File::load($associated_image);
+  $vars['associated_image'] = $associated_image_file->getFileUri();
+}
+
+/**
+ * Implements common demonstration details for internal and external users
+ */
+function _aigallery_demonstration_details($node, &$vars, $external = false) {
+
+  $field = 'field_demonstration_details';
+  $demo_link = 'field_demo_link';
+  $script = 'field_demonstration_script';
+  $demo_title = 'field_demo_title';
+  $demo_summary = 'field_demosummery';
+  if ($external) {
+    $field = 'field_demo_details_modified';
+    $demo_link = 'field_demo_link_modified';
+    $demo_title = '	field_demo_title_modified';
+    $demo_summary = 'field_demo_summary_modified';
+    $demo_githublink = 'field_github_link_modified';
+  }
+
+  $demo_ref = $node->$field->referencedEntities();
+  if (isset($demo_ref[0]) && !empty($demo_ref[0])) {
+    $parent_nid = $demo_ref[0]->toArray()['parent_id'][0]['value'];
+    if (isset($demo_ref[0]->toArray()[$demo_link][0]['value']) && !empty($demo_ref[0]->toArray()[$demo_link][0]['value'])) {
+      $vars['have_demonstration'] = $demo_ref[0]->toArray()[$demo_link][0]['value'];
+    }
+    $vars['demonstration_title'] = $demo_ref[0]->toArray()[$demo_title][0]['value'];
+    $vars['demonstration_summary'] = $demo_ref[0]->toArray()[$demo_summary][0]['value'];
+
+    if (isset($demo_ref[0]->toArray()[$script][0]['target_id']) && !empty($demo_ref[0]->toArray()[$script][0]['target_id'])) {
+      $demo_script_media = Media::load($demo_ref[0]->toArray()[$script][0]['target_id']);
+      $demo_script_targetid = $demo_script_media->field_media_file->target_id;
+      $demo_script_file = File::load($demo_script_targetid);
+      if (isset($demo_script_file)) {
+        $demo_script_fileSRC = file_create_url($demo_script_file->getFileUri());
+        $demo_script_fileName = $demo_script_file->getFilename();
+        $vars['demo_script_filesrc'] = $demo_script_fileSRC;
+        $vars['demo_script_filename'] = $demo_script_fileName;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Array $form
+ * \Drupal\Core\Form\FormStateInterface $form_state
+ *  unknown $form_id.
+ */
+function ai_contribute_usecase_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+  if ($form_id == 'node_use_case_or_accelerator_form' || $form_id == 'node_use_case_or_accelerator_edit_form') {
+    $form['#title'] = 'Submit Use case or Accelerator';
+    unset($form['moderation_state']['widget'][0]['#options']['draft']);
+    $form['#attached']['library'][] = 'ai_contribute_usecase/ai_contribute';
+    $form['#attached']['library'][] = 'ai_contribute_usecase/ai_contribute_sevenui';
+    $form['actions']['#prefix'] = '<div class="usecase-actions-wrapper"><div class="prev-button"><a class="prev-tab-selector change-tabs" data-button-type="prev" data-selected-tab="1">Previous</a></div>';
+    $form['actions']['#suffix'] = '<div class="next-button"><a class="next-tab-selector change-tabs" data-button-type="next" data-selected-tab="1">Next</a></div></div>';
+
+    // Adding classes for email and phone number owner pages.
+    $form['field_use_case_primary_owner_ema']['widget'][0]['value']['#attributes']['class'][] = 'email_field';
+    $form['field_usecase_secn_owner_email']['widget'][0]['value']['#attributes']['class'][] = 'email_field';
+    $form['field_usecase_primary_ownet_cnt']['widget'][0]['value']['#attributes']['class'][] = 'contact_phone_field';
+    $form['field_usecase_secon_owner_cn']['widget'][0]['value']['#attributes']['class'][] = 'contact_phone_field';
+    $form['field_linked_url']['widget'][0]['uri']['#attributes']['class'][] = 'linkedin_url_field';
+    $form['field_linkedin_sec_url']['widget'][0]['uri']['#attributes']['class'][] = 'linkedin_url_field';
+    
+    $form['field_case_study_details']['widget'][0]['subform']['field_contact_email']['widget'][0]['value']['#attributes']['class'][] = 'email_contact_field';
+
+    $form['actions']['submit']['#attributes']['class'][] = 'contributesave';
+
+    $form['actions']['select_preview'] = [
+      '#type' => 'select',
+      '#options' => [
+        '0' => 'Preview',
+        '1' => 'Internal Preview',
+      ],
+      '#ajax' => [
+        'callback' => 'ai_contribute_usecase_preview',
+        'disable-refocus' => FALSE, // Or TRUE to prevent re-focusing on the triggering element.
+        'event' => 'change',
+        'wrapper' => 'preview_output', // This element is updated with this AJAX callback.
+        'progress' => [
+          'type' => 'aiCustomProgressBar',
+          'message' => 'Preview !',
+        ],
+      ]
+    ];
+    //$form['#attached']['library'][] = 'custom_ajax_progress_bar/ajax_progress_bar.myAwesomeProgressBar';
+    $form['actions']['select_preview']['#attributes']['class'][] = 'contributesave';
+    $form['#prefix'] = '<div id="preview_output">';
+    $form['#suffix'] = '</div>';
+    add_draft($form);
+    /* dont change the order of form submit as we r customizing the order of primary industry and domain entries in the optional industry and domain table.*/
+    array_unshift($form['actions']['submit']['#submit'], 'ai_contribute_usecase_primary_category_form_submit');
+    $form['actions']['submit']['#validate'][] = 'asset_owner_contributor_email_domain_validate';
+    // tool tip start
+    $form['#attached']['library'][] = 'ai_contribute_usecase/ai_contribute_tooltip';
+    $form['field_geography']['associated_coe'] = [
+      '#type' => 'hidden',
+      '#value' => 'Select the associated CoE under which your solution categorises. An email for validation will be sent to the geography leads.',
+    ];
+    $form['field_have_demonstration']['help_text_for_live_demo'] = [
+      '#type' => 'hidden',
+      '#value' => 'Please provide live environment details of the solution/tool',
+    ];
+    $form['field_demo_video']['help_text_for_demo'] = [
+      '#type' => 'hidden',
+      '#value' => 'If your solution/tool is not present in any live environment, alternatively please provide an walkthrough video of your solution/tool'
+    ];
+    $form['field_have_video_usecase']['help_text_for_usecase'] = [
+      '#type' => 'hidden',
+      '#value' => 'If you do not have a tool for your use case, please provide use case walkthough video',
+    ];
+    $form['field_usecase_industry']['help_text_for_industry'] = [
+      '#type' => 'hidden',
+      '#value' => 'Select the most relevant Industry which will be the best fit for your solution. A validation email will be sent to the Industry leads.',
+    ];
+    $form['field_usecase_domain']['help_text_for_domain'] = [
+      '#type' => 'hidden',
+      '#value' => 'Select the most relevant Playing Field and Domain categories which will be the best fit for your solution. A validation email will be sent to the Playing Field leads.',
+    ];
+    $form['field_offer']['help_text_for_offer'] = [
+      '#type' => 'hidden',
+      '#value' => 'Select the most relevant Offer which will be the best fit for your solution. A validation email will be sent to the Offer leaders.',
+    ];
+    $form['field_have_demonstration']['help_text_for_live_demo'] = [
+      '#type' => 'hidden',
+      '#value' => 'Please provide live environment details of the solution/tool',
+    ];
+    $form['field_usecase_domain']['help_text_for_domain'] = [
+      '#type' => 'hidden',
+      '#value' => 'Select the most relevant Playing Field and domain categories which will be the best fit for your solution. A validation email will be sent to the Playing Field leads.',
+    ];
+    $form['field_offer']['help_text_for_offer'] = [
+      '#type' => 'hidden',
+      '#value' => 'Select the most relevant Offer which will be the best fit for your solution. A validation email will be sent to the Offer leaders.',
+    ];
+
+    $config_email = \Drupal::config('ai_utility_general.settings');
+    $email_message = $config_email->get('asset_owner_valid_email_domain');
+    if (!empty($email_message)) {
+      $form['field_owner_contributors']['owner_contributor_email_message'] = [
+        '#type' => 'hidden',
+        '#value' => $email_message,
+      ];
+    }
+    $terms_data = array();
+    $vocabularies = array('offer', 'domain', 'use_case_category', 'asset_category', 'industries', 'ai_features', 'tech_stacks', 'frameworks');
+    foreach ($vocabularies as $vocabularie) {
+      $terms = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->loadTree($vocabularie);
+      foreach ($terms as $term) {
+        $term_obj = Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($term->tid);
+        if ($term_obj->hasField('field_tooltip_text')) {
+          if (!empty($term_obj->get('field_tooltip_text')->value)) {
+            $terms_data[$term_obj->get('tid')->value] = $term_obj->get('field_tooltip_text')->value;
+          }
+        }
+      }
+    }
+    $tooltip_messages = $terms_data;
+    $tooltip_messages = Json::encode($tooltip_messages);
+    $form['tooltip_messages']['help_text_for_checkboxes'] = [
+      '#type' => 'hidden',
+      '#value' => $tooltip_messages,
+    ];
+    // tool tip end
+
+    // other field setting start
+    $show_all_links = $show_parent_link = $show_feature_link = $show_framewrok_link = false;
+    $uniqid_session = \Drupal::service('tempstore.private')->get('ai_contribute_usecase');
+    $uniqid = $uniqid_session->get('uniqid');
+    $is_new_asset = $uniqid_session->get('is_new_asset');
+    $uniqid_session->set('allow_add_tag','allow');
+    // other field setting end
+    $nid = $form_state->getformObject()->getEntity()->id();
+    if (isset($nid) && !empty($nid)) {
+      $latest_revision = \Drupal::entityTypeManager()->getStorage('node')
+        ->getQuery()
+        ->latestRevision()
+        ->condition('nid', $nid)
+        ->execute();
+      if (isset($latest_revision) && !empty($latest_revision)) {
+        $latest_revision_id = array_keys($latest_revision)[0];
+        $node = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($latest_revision_id);
+        $current_moderation_state = $node->get('moderation_state')->getValue()[0]['target_id'];
+
+        $current_status = \Drupal::database()->select('node_field_data','n')
+            ->fields('n',array('status'))
+            ->condition('nid',$nid)
+            ->execute()->fetchField();
+
+        $form['current_status'] = [
+         '#type' => 'hidden',
+         '#value' => $current_status,
+        ];
+        $uniqid_session->set('uniqid',$nid);
+        if ($current_moderation_state == 'needs_review' || $current_moderation_state == 'published' || $current_moderation_state =='archived') {
+          $form['actions']['draft']['#access'] = FALSE;
+          $show_all_links = false;
+          $uniqid_session->set('allow_add_tag','not allowed');
+          if(ChecklistAccessCheck::isUserHasChecklistAccess($node)){
+            $show_all_links = true;
+            $uniqid_session->set('allow_add_tag','allow');
+          }
+        }
+        
+        if($current_moderation_state == 'published'){
+            $uniqid_session->set('allow_add_tag','allow');
+        }
+        if($current_moderation_state == 'draft'){
+          $show_all_links = true;
+        }
+        $up_uid = $node->getRevisionUserId();
+        // Pass your uid.
+        $account = User::load($up_uid);
+        if (!empty($account)) {
+          $last_up_uname = $account->getUsername();
+
+          $form['last_updated_user_info'] = [
+            '#type' => 'details',
+            '#title' => t('Last Updated By'),
+            '#group' => 'advanced',
+          ];
+          $form['last_updated_user_info']['last_up_users'] = [
+            '#type' => 'item',
+            '#title' => t('Content Last Edited By'),
+            '#markup' => '<br/><a href="/users/' . $last_up_uname . '" target="_blank">' . $account->field_las->value . ',' . $account->field_first_name->value . '</a>',
+            '#maxlength' => 180,
+            '#weight' => -50,
+          ];
+          $form['last_updated_user_info']['last_up_revdate'] = [
+            '#type' => 'item',
+            '#title' => t('Last Updated On'),
+            '#weight' => -1,
+            '#markup' => '<br/>' . \Drupal::service('date.formatter')->format($node->getChangedTime(), 'medium'),
+            '#maxlength' => 180,
+            '#weight' => -49,
+          ];
+          $form['last_updated_user_info']['last_up_revisions'] = [
+            '#type' => 'item',
+            '#title' => t('View Node Revisions'),
+            '#weight' => -1,
+            '#markup' => '<br/><a href="/node/' . $nid . '/revisions" target="_blank">Revisions Details</a>',
+            '#maxlength' => 180,
+            '#weight' => -49,
+          ];
+        }
+      }
+    }else{
+      if(empty($is_new_asset)){
+        $uniqid_session->set('uniqid',rand(10,999));
+        $uniqid_session->set('is_new_asset',true);
+      }else{
+        // on call of other ajax form in the page should not delete the tags
+        $is_drupal_ajax = \Drupal::request()->query->get('ajax_form');
+        if(!$is_drupal_ajax){
+          // this is to delete record if user reload the page
+          AiOtherFieldStorage::deleteTagByUniquid($uniqid);
+        }
+      } 
+    }
+    $uniqid = $uniqid_session->get('uniqid');
+    // get other category check status
+    $existing_tag = AiOtherFieldStorage::loadByTag($uniqid);
+    if(!empty($existing_tag)){
+      $show_all_links = true;
+      $show_parent_link = $show_feature_link = $show_framewrok_link = false;
+      for ($i = 0; $i < count($existing_tag); $i++) { 
+        $case = (int)$existing_tag[$i]->other_type;
+        switch($case){
+          case 1: $show_parent_link = true;
+          break;
+          case 2: $show_feature_link = true;
+          break;
+          case 3: $show_framewrok_link = true;
+          break; 
+        }
+      }
+    }
+    $url = Url::fromRoute('ai_contribute_usecase.other_field');
+    $settings = [
+      'callbackUrl' => $url->toString(),
+      'uniqid' => $uniqid,
+      'links_visibility' => [
+        'all' => $show_all_links,
+        'partner_link' => $show_parent_link,
+        'feature_link' => $show_feature_link,
+        'framework_link' => $show_framewrok_link
+      ],
+    ];
+    $form['#attached']['library'][] = 'ai_contribute_usecase/other_field';
+    $form['#attached']['drupalSettings']['ai_contribute_usecase_setting'] = $settings;
+    
+    $form['other_field']['other_partner'] = [
+      '#type' => 'item',
+      '#markup' => "<a class='use-ajax ctools-use-modal ctools-modal-modal-popup-medium' href='/ai-usecase/other-modal/1/{$uniqid}'>Click here to add other Partner</a><a href='/usecase-accelerator-upload-guide#other_fieldguide' target='_blank'><i class='fas fa-info'></i></a>",
+    ];
+    $form['other_field']['other_feature'] = [
+      '#type' => 'item',
+      '#markup' => "<a class='use-ajax ctools-use-modal ctools-modal-modal-popup-medium' href='/ai-usecase/other-modal/2/{$uniqid}'>Click here to add other Feature</a><a href='/usecase-accelerator-upload-guide#other_fieldguide' target='_blank'><i class='fas fa-info'></i></a>",
+    ];
+    $form['other_field']['other_framework'] = [
+      '#type' => 'item',
+      '#markup' => "<a class='use-ajax ctools-use-modal ctools-modal-modal-popup-medium' href='/ai-usecase/other-modal/3/{$uniqid}'>Click here to add other Framework</a><a href='/usecase-accelerator-upload-guide#other_fieldguide' target='_blank'><i class='fas fa-info'></i></a>",
+    ];
+    // other field setting end here
+    return $form;
+  }
+  if ($form_id == 'bulk_update_fields_form') {
+    // Title changes.
+    $form['table']['#options']['field_usecase_or_accelerator']['field_name'] = 'Use case or Accelerator';
+    $form['table']['#options']['field_accelerator_use_case_conte']['field_name'] = 'Link an Accelerator to this Use case';
+    $form['table']['#options']['field_use_case_primary_owner_nam']['field_name'] = 'Primary Owner Name';
+    $form['table']['#options']['field_use_case_primary_owner_ema']['field_name'] = 'Primary Owner Email';
+    $form['table']['#options']['field_usecase_primary_ownet_cnt']['field_name'] = 'Primary Owner Contact';
+
+    $form['table']['#options']['field_usecase_secn_owner_name']['field_name'] = 'Secondary Owner Name';
+    $form['table']['#options']['field_usecase_secn_owner_email']['field_name'] = 'Secondary Owner Email';
+    $form['table']['#options']['field_usecase_secon_owner_cn']['field_name'] = 'Secondary Owner Contact';
+
+    $form['table']['#options']['field_use_case_or_accelerator_de']['field_name'] = 'Use case or Accelerator Details';
+    $form['table']['#options']['field_usecase_weight']['field_name'] = 'Use case weight';
+    $form['table']['#options']['field_featured_usecase']['field_name'] = 'Featured Use case';
+    $form['table']['#options']['field_usecase_video_link']['field_name'] = 'Use case Video';
+
+    $form['field_use_case_primary_owner_nam']['widget'][0]['value']['#title'] = 'Primary Owner Name';
+    $form['field_use_case_primary_owner_nam']['widget']['#weight'] = -50;
+    $form['field_use_case_primary_owner_nam']['widget'][0]['value']['#weight'] = -50;
+    $form['field_use_case_primary_owner_ema']['widget'][0]['value']['#title'] = 'Primary Owner Email';
+    $form['field_use_case_primary_owner_ema']['widget']['#weight'] = -49;
+    $form['field_use_case_primary_owner_ema']['widget'][0]['value']['#weight'] = -49;
+    $form['field_usecase_primary_ownet_cnt']['widget'][0]['value']['#title'] = 'Primary Owner Contact';
+    $form['field_usecase_primary_ownet_cnt']['widget']['#weight'] = -48;
+    $form['field_usecase_primary_ownet_cnt']['widget'][0]['value']['#weight'] = -48;
+    $form['field_usecase_secn_owner_name']['widget'][0]['value']['#title'] = 'Secondary Owner Name';
+    $form['field_usecase_secn_owner_name']['widget']['#weight'] = -47;
+    $form['field_usecase_secn_owner_name']['widget'][0]['value']['#weight'] = -47;
+    $form['field_usecase_secn_owner_email']['widget'][0]['value']['#title'] = 'Secondary Owner Email';
+    $form['field_usecase_secn_owner_email']['widget']['#weight'] = -46;
+    $form['field_usecase_secn_owner_email']['widget'][0]['value']['#weight'] = -46;
+    $form['field_usecase_secon_owner_cn']['widget'][0]['value']['#title'] = 'Secondary Owner Contact';
+    $form['field_usecase_secon_owner_cn']['widget']['#weight'] = -45;
+    $form['field_usecase_secon_owner_cn']['widget'][0]['value']['#weight'] = -45;
+  }
+}
+
+/**
+ *
+ * inherdit hook_validate()
+ */
+function asset_owner_contributor_email_domain_validate($form, FormStateInterface $form_state) {
+  $pri_email = $form_state->getValue('field_use_case_primary_owner_ema')[0]['value'];
+  $config = \Drupal::config('ai_utility_general.settings');
+  $owner_email_message = $config->get('asset_owner_valid_email_domain');
+  if (!empty($pri_email)) {
+    if (AiUtilityService::validateOwnerContributorEmailID($pri_email)) {
+      $form_state->setErrorByName('field_use_case_primary_owner_ema', ($owner_email_message));
+    }
+  }
+  if (!empty($sec_email)) {
+    if (AiUtilityService::validateOwnerContributorEmailID($sec_email)) {
+      $form_state->setErrorByName('field_usecase_secn_owner_email', ($owner_email_message));
+    }
+  }
+}
+
+/**
+* custom submit handler to handle primary categories in optional
+*/
+function ai_contribute_usecase_primary_category_form_submit($form, &$form_state) {
+  // 1. Get the primary selected indrustry
+  $primary_industry = $form_state->getValue('field_primary_industry')[0]['target_id'];
+  // 1.1 Get the parent tid of selected primary industry
+  $term = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($primary_industry);
+  $parent_primary_industry = $term->parent->target_id;
+  // 2. Check in the option industry category, by default primary industry is selected,
+  $optional_industries = $form_state->getValue('field_usecase_industry');
+  $optional_industries_tagetids = array_column($optional_industries, 'target_id');
+  if(!in_array($primary_industry, $optional_industries_tagetids)){
+    // 3. If not add primary industry parent and child tid entries into optional industry table so change the values of 'field_usecase_industry'.
+    $optional_industries[]['target_id'] = $primary_industry;
+  }
+  if(!in_array($parent_primary_industry, $optional_industries_tagetids)){
+    $optional_industries[]['target_id'] = $parent_primary_industry;
+  }
+  $form_state->setValue('field_usecase_industry', $optional_industries);
+  // 4. This is to make entry of primary industry value in optional industry table to get proper parent count in the filter selection of facet blocks/views
+
+  // 1. Get the domain selected indrustry
+  $primary_domain = $form_state->getValue('field_primary_domain')[0]['target_id'];
+  // 1.1 Get the parent tid of selected primary domain
+  $term = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($primary_domain);
+  $parent_primary_domain = $term->parent->target_id;
+  // 2. Check in the option domain category, by default primary domain is selected,
+  $optional_domains = $form_state->getValue('field_usecase_domain');
+  $optional_domains_tagetids = array_column($optional_domains, 'target_id');
+  if(!in_array($primary_domain, $optional_domains_tagetids)){
+    // 3. If not add primary industry parent and child tid entries into optional industry table so change the values of 'field_usecase_domain'.
+    $optional_domains[]['target_id'] = $primary_domain;
+  }
+  if(!in_array($parent_primary_domain, $optional_domains_tagetids)){
+    $optional_domains[]['target_id'] = $parent_primary_domain;
+  }
+  $form_state->setValue('field_usecase_domain', $optional_domains);
+}
+
+/* * *
+ * Save draft qithout validation.
+ */
+
+function ai_contribute_usecase_form_after_build($form, &$form_state) {
+  // Check that the form has been submitted.
+  if ($form_state->isProcessingInput()) {
+
+    $node = \Drupal::routeMatch()->getParameter('node');
+    if ($node instanceof \Drupal\node\NodeInterface) {
+      if($node->bundle() == 'use_case_or_accelerator'){
+        //update the user draft n review notification
+        _ai_contribute_usecase_notification_update($node->id());
+        _ai_checklist_other_field($node);
+      }
+    }
+    // If the save draft button was pressed.
+    if ($form_state->getTriggeringElement()['#id'] === 'edit-draft') {
+      remove_required($form);
+    }
+  }
+  return $form;
+}
+
+/**
+ * Add_draft.
+ */
+function add_draft(&$form) {
+  $form['actions']['draft'] = [
+    '#type' => 'submit',
+    '#value' => t('Save draft'),
+    '#weight' => '9',
+    '#attributes' => ['class' => ['savedraftbutton']],
+    // '#prefix' => '<div class="usecase-actions-wrapper">',
+    // '#suffix' => '</div>',
+    '#submit' => $form['actions']['submit']['#submit'],
+    '#validate' => ['save_draft_validate'],
+  ];
+  array_unshift($form['actions']['draft']['#submit'], 'save_draft_unpublish_submit');
+  $form['#after_build'][] = 'ai_contribute_usecase_form_after_build';
+}
+
+/**
+ * Find element by_path.
+ */
+function find_element_by_path($element, $path) {
+  if (count($path) === 0) {
+    return $element['widget'];
+  }
+  if (is_numeric($path[0])) {
+    return find_element_by_path($element['widget'][array_shift($path)], $path);
+  }
+  return find_element_by_path($element[array_shift($path)], $path);
+}
+
+/**
+ * Save draft validate.
+ */
+function save_draft_validate($form, &$form_state) {
+  // Remove all NotNull validation errors related to required fields.
+  $errors = $form_state->getErrors();
+  foreach ($errors as $key => $error) {
+    if ($error->getUntranslatedString() === 'This value should not be null.') {
+      $element = find_element_by_path($form, explode('][', $key));
+      if (isset($element['#originallyRequired']) && $element['#originallyRequired']) {
+        unset($errors[$key]);
+      }
+      elseif ($element['#theme'] === 'file_widget_multiple') {
+        if (isset($element[0]['#originallyRequired']) && $element[0]['#originallyRequired']) {
+          unset($errors[$key]);
+        }
+      }
+    }
+    elseif ($error->getUntranslatedString() === 'An illegal choice has been detected. Please contact the site administrator.') {
+      $element = find_element_by_path($form, explode('][', $key));
+      if (isset($element['#originallyRequired']) && $element['#originallyRequired'] && $element['#value'] === '_none') {
+        unset($errors[$key]);
+      }
+    }
+  }
+  $form_state->clearErrors();
+  if (count($errors) === 0) {
+    $form_state->setTemporaryValue('entity_validated', TRUE);
+  }
+  else {
+    foreach ($errors as $key => $error) {
+      $form_state->setErrorByName($key, $error);
+    }
+  }
+}
+
+/**
+ * Save draft unpublish_submit.
+ */
+function save_draft_unpublish_submit($form, &$form_state) {
+  $form_state->setValue('status', ['value' => 0]);
+}
+
+/**
+ * Remove required.
+ */
+function remove_required(&$element) {
+  // Recurse through all children.
+  foreach (Element::children($element) as $key) {
+    if (isset($element[$key]) && $element[$key]) {
+      remove_required($element[$key]);
+    }
+  }
+  // Make sure the title field remains required.
+  $titleIds = ['edit-title', 'edit-title-0', 'edit-title-0-value'];
+  if (!empty($element['#required']) && !in_array($element['#id'], $titleIds)) {
+    $element['#originallyRequired'] = $element['#required'];
+    $element['#required'] = FALSE;
+  }
+}
+
+function ai_contribute_usecase_preview(array &$form, FormStateInterface $form_state) {
+
+  $response = new AjaxResponse();
+  $selected = $form_state->getValue('select_preview');
+  $renderedField = $id = '';
+  if ($selected != 0) {
+    $vars = $filearray = array();
+    $values = $form_state->getValues();
+
+    $global_flag = $values['field_do_you_want_to_showcase_th'][0]['value'];
+    $have_demonstration = $values['field_have_demonstration'][0]['value'];
+    $have_demo_video = $values['field_demo_video'][0]['value'];
+    $have_usecase_video = $values['field_have_video_usecase'][0]['value'];
+    $title = $values['title'][0]['value'];
+    $usecase_accelerator = (strtolower($values['field_usecase_or_accelerator'][0]['value']) == 'accelerator') ? 'Accelerator' : 'Usecase';
+
+    $associated_image_id = $values['field_associated_image'][0]['fids'][0];
+    $associated_image_file = File::load($associated_image_id);
+    $associated_image = $associated_image_file->getFileUri();
+
+    $selectedText = $form['action']['select_preview']['#options'][$selected];
+
+    $demonstration_link = $demo_video_link = $use_video_fileSRC = $selected_preview = '';
+    if ($selected == 1) {
+      $selected_preview = "Internal";
+      $vars['business_driver_d'] = $values['body'][0]['value'];
+      $vars['solution_data'] = $values['field_solution'][0]['value'];
+      if ((strtolower($have_demonstration) == 'yes')) {
+        $demonstration_link = $values['field_demonstration_details'][0]['inline_entity_form']['field_demo_link'][0]['value'];
+      }
+      if ((strtolower($have_demo_video) == 'yes')) {
+        $demo_video_link = _ai_media_file_details($values['field_demo_video_link']['selection'][0]['target_id']);
+      }
+      if ((strtolower($have_usecase_video) == 'yes')) {
+        if (empty($demo_video_link)) {
+          $use_video_fileSRC = _ai_media_file_details($values['field_usecase_video_link']['selection'][0]['target_id']);
+        }
+        elseif (!(empty($demo_video_link)) && (strtolower($have_demo_video) == 'yes')) {
+          $media_exists = _ai_media_file_details($values['field_usecase_video_link']['selection'][0]['target_id'], TRUE);
+          if ($media_exists) {
+            $filearray[] = $media_exists;
+          }
+        }
+      }
+    }
+    else if ($selected == 2 && (strtolower($global_flag) == 'yes')) {
+
+      $selected_preview = "External";
+      //if(strtolower($values['field_business_driver_check'][0]['value']) == 'yes') {
+      $vars['business_driver_d'] = $values['field_business_driver_duplicate'][0]['value'];
+      //}
+      //if(strtolower($values['field_s'][0]['value']) == 'yes') {
+      $vars['solution_data'] = $values['field_solution_duplicate'][0]['value'];
+      //}
+      if ((strtolower($values['field_live_demo_env_check'][0]['value']) == 'yes') && (strtolower($have_demonstration) == 'yes')) {
+        $demonstration_link = $values['field_demo_details_modified'][0]['inline_entity_form']['field_demo_link_modified'][0]['value'];
+      }
+
+      if ((strtolower($values['field_demo_video_check'][0]['value']) == 'yes') && (strtolower($have_demo_video) == 'yes')) {
+        $demo_video_link = _ai_media_file_details($values['field_demo_video_modified_']['selection'][0]['target_id']);
+      }
+      if ((strtolower($values['field_usecase_video_check'][0]['value']) == 'yes') && (strtolower($have_usecase_video) == 'yes')) {
+        if (empty($demo_video_link)) {
+          $use_video_fileSRC = _ai_media_file_details($values['field_usecase_video_modified_']['selection'][0]['target_id']);
+        }
+        elseif (!(empty($demo_video_link)) && (strtolower($values['field_demo_video_check'][0]['value']) == 'yes') && (strtolower($have_demo_video) == 'yes')) {
+          $media_exists = _ai_media_file_details($values['field_usecase_video_modified_']['selection'][0]['target_id'], TRUE);
+          if ($media_exists) {
+            $filearray[] = $media_exists;
+          }
+        }
+      }
+    }
+    $vars['demo_video'] = $demo_video_link;
+    $vars['usecase_link'] = $use_video_fileSRC;
+    // 2. Primary Industry and Domain
+    // 2.1 Primary Industry
+    $tags['field_usecase_industry'] = $values['field_usecase_industry'];
+    $tags['field_usecase_domain'] = $values['field_usecase_domain'];
+    $tags['field_offer'] = $values['field_offer'];
+    $tags['field_category'] = $values['field_category'];
+    $tags['field_usecase_aifeatures'] = $values['field_usecase_aifeatures'];
+    $tags['field_usecase_framework'] = $values['field_usecase_framework'];
+    $tags['field_usecase_technology'] = $values['field_usecase_technology'];
+    $usecase_tags = _aigallery_get_usecase_tags_preview($tags);
+
+    $contact_owner_email = $contact_owner_name = $owner_linkedin = '';
+
+    if (isset($values['field_use_case_primary_owner_ema'][0]['value']) && !empty($values['field_use_case_primary_owner_ema'][0]['value']) && valid_email_address($values['field_use_case_primary_owner_ema'][0]['value']) && isset($values['field_use_case_primary_owner_nam'][0]['value']) && !empty($values['field_use_case_primary_owner_nam'][0]['value'])) {
+      $contact_owner_email = $values['field_use_case_primary_owner_ema'][0]['value'];
+      $contact_owner_name = $values['field_use_case_primary_owner_nam'][0]['value'];
+    }
+    else if (isset($values['field_usecase_secn_owner_email'][0]['value']) && !empty($values['field_usecase_secn_owner_email'][0]['value']) && valid_email_address($values['field_usecase_secn_owner_email'][0]['value']) && isset($values['field_usecase_secn_owner_name'][0]['value']) && !empty($values['field_usecase_secn_owner_name'][0]['value'])) {
+      $contact_owner_email = $values['field_usecase_secn_owner_email'][0]['value'];
+      $contact_owner_name = $values['field_usecase_secn_owner_name'][0]['value'];
+    }
+
+    if (isset($values['field_linked_url'][0]['uri']) && !empty($values['field_linked_url'][0]['uri'])) {
+      $owner_linkedin = $values['field_linked_url'][0]['uri'];
+    }
+    elseif (isset($values['field_linkedin_sec_url'][0]['uri']) && !empty($values['field_linkedin_sec_url'][0]['uri'])) {
+      $owner_linkedin = $values['field_linkedin_sec_url'][0]['uri'];
+    }
+
+    $current_user = \Drupal::currentUser();
+    $uid = $current_user->id();
+    // Get Author and Contributor names.
+    $author_contributor = [];
+    if (!is_null($uid)) {
+      $author_name = _aigallery_get_user_formatted_name($uid);
+      $author_contributor[$uid] = $author_name;
+    }
+    $other_contributors = $values['field_other_contributors'];
+
+    for ($i = 0; $i < count($other_contributors); $i++) {
+      $author_contributor[$other_contributors[$i]['target_id']] = _aigallery_get_user_formatted_name($other_contributors[$i]['target_id']);
+    }
+
+    $author_contributor_name = '';
+    if (count($author_contributor) > 2) {
+      $first = TRUE;
+      $count = 0;
+      foreach ($author_contributor as $value) {
+        if ($first) {
+          $author_contributor_name .= trim($value);
+          $first = FALSE;
+        }
+        else {
+          $author_contributor_name .= ', ' . trim($value);
+        }
+        $count++;
+        if ($count > 1) {
+          break;
+        }
+      }
+      $author_contributor_name = trim($author_contributor_name) . ' + ' . (count($author_contributor) - 2) . ' more';
+    }
+    else {
+      $author_contributor_name = implode(', ', $author_contributor);
+    }
+
+
+    $field_attachments = $values['field_attachments']['selection'];
+    for ($i = 0; $i < count($field_attachments); $i++) {
+      $media_exists = _ai_media_file_details($field_attachments[$i]['target_id'], TRUE);
+
+      if ($media_exists) {
+        $filearray[] = $media_exists;
+      }
+    }
+
+    $build = [
+      '#theme' => 'ai_usecase_accelerator_preview_page',
+      '#usecase_or_accelerator' => $usecase_accelerator,
+      '#author_contributor_name' => $author_contributor_name,
+      '#business_driver_d' => $vars['business_driver_d'],
+      '#solution_data' => $vars['solution_data'],
+      '#demo_video' => $vars['demo_video'],
+      '#usecase_link' => $vars['usecase_link'],
+      '#filearray' => $filearray,
+      '#contact_owner_email' => $contact_owner_email,
+      '#contact_owner_name' => $contact_owner_name,
+      '#owner_linkedin' => $owner_linkedin,
+      '#usecase_tags' => $usecase_tags,
+      '#node_title' => $title,
+      '#have_demonstration' => $demonstration_link,
+      '#associated_image' => $associated_image,
+    ];
+
+    $renderer = \Drupal::service('renderer');
+    $renderedField = $renderer->render($build);
+  }
+  else {
+    $renderedField = 'Select the preview';
+  }
+
+  $dialogText['#attached']['library'][] = 'core/drupal.dialog.ajax';
+  $dialogText['#markup'] = $renderedField;
+  // Show the dialog box.
+  $options = array(
+    'dialogClass' => 'preview-dialog-class',
+  );
+  $response->addCommand(new OpenModalDialogCommand($selected_preview . ' Preview', $dialogText, $options));
+
+  // Finally return the AjaxResponse object.
+  return $response;
+}
+
+/**
+  Common media file details function
+  used in aigallery.theme and UserContent controller file
+ * */
+function _ai_media_file_details($media_id, $details = FALSE) {
+  $media = Media::load($media_id);
+  if ($media) {
+    $type = $media->bundle();
+    switch ($type) {
+      case 'image':
+        $field = 'field_media_image';
+        break;
+
+      case 'audio':
+        $field = 'field_media_audio_file';
+        break;
+
+      case 'video':
+        $field = 'field_media_video_file';
+        break;
+
+      case 'remote_video':
+        $field = 'field_media_oembed_video';
+        break;
+
+      case 'external_link':
+        $field = 'field_media_external_link';
+        break;
+
+      case 'file':
+        $field = 'field_media_file';
+        break;
+
+      default:
+        $field = 'field_media_file';
+    }
+    $field_val = $media->get($field)->getValue();
+    $name = $media->label();
+    if (in_array($type, ['external_link', 'remote_video'])) {
+      $video_link = ($type === 'external_link') ? $field_val[0]['uri'] : $field_val[0]['value'];
+      if ($details) {
+        if (!is_null($video_link)) {
+          $attachment_arr = [];
+          $attachment_arr['fileurl'] = $video_link;
+          $attachment_arr['fullfileName'] = $name;
+          $attachment_arr['fileName'] = (strlen($name) > 20) ? substr($name, 0, 20) . '...' : $name;
+          $attachment_arr['fileext'] = $type;
+          $attachment_arr['fileuploaded'] = 'Collateral File';
+          $attachment_arr['class'] = 'collaterals-file';
+          return $attachment_arr;
+        }
+        else {
+          return false;
+        }
+      }
+      else {
+        return $video_link;
+      }
+    }
+    else {
+      $fid = $field_val[0]['target_id'];
+      $attachment_file = File::load($fid);
+      $video_link = file_create_url($attachment_file->getFileUri());
+      if ($details) {
+        if (!is_null($video_link)) {
+          $attachment_arr = [];
+          $attachment_fileName = $attachment_file->getFilename();
+          $attachment_fileSize = $attachment_file->getSize();
+          $attachment_split_filename = explode('.', $attachment_fileName);
+
+          $attachment_arr['fileurl'] = $video_link;
+          $attachment_arr['fullfileName'] = $name;
+          $attachment_arr['fileName'] = (strlen($name) > 20) ? substr($name, 0, 20) . '...' : $name;
+          $attachment_arr['fileSize'] = format_size($attachment_fileSize);
+          $attachment_arr['fileext'] = strtolower($attachment_split_filename[count($attachment_split_filename) - 1]);
+          $attachment_arr['fileuploaded'] = 'Collateral File';
+          $attachment_arr['class'] = 'collaterals-file';
+          return $attachment_arr;
+        }
+        else {
+          return false;
+        }
+      }
+      else {
+        return $video_link;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Adding label for primary industry and domain tab
+ * by altering shs module's setting.
+ */
+function ai_contribute_usecase_shs_js_settings_alter(&$settings_shs, $bundle, $field_name) {
+  if ($field_name === 'field_primary_domain') {
+    $settings_shs['labels'] = [
+      FALSE,
+      t('Sub-Domain'),
+    ];
+  }
+  if ($field_name === 'field_primary_industry') {
+    $settings_shs['labels'] = [
+      FALSE,
+      t('Sub-Industry '),
+    ];
+    $settings_shs['display']['labelsOnEveryLevel'] = TRUE;
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function ai_contribute_usecase_cron() {
+
+  // Notification for the asset in the draft mode.
+  $draft_node_details = AIContentNotificationService::getDraftListOfNodes();
+  AIContentNotificationService::processNotificationData($draft_node_details, 'draft-asset-opt');
+
+  // Notification for the asset which comment are not replied.
+  $unattended_comment_node_details = AIContentNotificationService::getUnAttendedCommentListOfNodes();
+  AIContentNotificationService::processNotificationData($unattended_comment_node_details, 'pending-review-asset-opt');
+}
+
+/**
+* custom submit handler to update the draft or review notification for submitted asset
+*/
+function _ai_contribute_usecase_notification_update($nid) {
+  $database = \Drupal::database();
+  $query = $database->update('user_notification')->fields(['status' => 0])->condition('entity_id',$nid)->condition('entity_type','use_case_or_accelerator')->condition('operation',array('draft-asset-opt','draft-asset-opt-non-aa','pending-review-asset-opt', 'pending-review-asset-opt-non-aa'),'IN');
+    $query->execute();
+}
+
+/**
+ * Implements hook_mail().
+ */
+function ai_contribute_usecase_mail($key, &$message, $params) {
+  $bulk_mail_settings = \Drupal::config('ai_contribute_usecase.bulk_mail.settings');
+  $options = [
+    'langcode' => \Drupal::languageManager()->getCurrentLanguage()->getId(),
+  ];
+
+  $from = \Drupal::config('system.site')->get('mail');
+  $message['from'] = $from;
+  $message['Return-Path'] = $from;
+  $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+  $message['headers']['Return-Path'] = $from;
+  $message['headers']['From'] = $from;
+  $message['headers']['Sender'] = $from;
+
+  $token_service = \Drupal::token();
+  $token_options = ['langcode' => $message['langcode'], 'callback' => 'ai_contribute_usecase_mail_tokens', 'clear' => TRUE];
+
+  switch ($key) {
+    case 'ai_contribute_usecase_asset_bulk_mail':
+      $msg = $bulk_mail_settings->get('asset_bulk_email_body');
+      $rendered_email_template = get_bulk_email_asset_content();
+      $message['subject'] = PlainTextOutput::renderFromHtml($token_service->replace($bulk_mail_settings->get('asset_bulk_email_subject'), $params, $token_options));
+      $message['body'][] = $token_service->replace($rendered_email_template, $params, $token_options);
+      AiUtilityService::_is_email_debug_mode_enabled($message);
+      break;
+  }
+}
+
+/**
+ * Token callback to add unsafe tokens for user mails.
+ *
+ * This function is used by \Drupal\Core\Utility\Token::replace() to set up
+ * some additional tokens that can be used in email messages generated by
+ * user_mail().
+ *
+ * @param array $replacements
+ *   An associative array variable containing mappings from token names to
+ *   values (for use with strtr()).
+ * @param array $data
+ *   An associative array of token replacement values. If the 'user' element
+ *   exists, it must contain a user account object with the following
+ *   properties:
+ *   - login: The UNIX timestamp of the user's last login.
+ *   - pass: The hashed account login password.
+ * @param array $options
+ *   A keyed array of settings and flags to control the token replacement
+ *   process. See \Drupal\Core\Utility\Token::replace().
+ */
+function ai_contribute_usecase_mail_tokens(&$replacements, $data, $options) {
+  if ($data['get_bulk_email_content']) {
+    $replacements['[user:name]'] = $data['user_name'];
+  }
+  if ($data['asset_template_replacement']) {
+    $replacements['[user:name]'] = '[user:name]';
+    $replacements['[assets:bulk-email-content]'] = $data['rendered_asset_data'];
+  }
+}
+
+/**
+ * Asset bulk email template to be sent.
+ *
+ */
+function get_bulk_email_asset_content() {
+
+  $email_rendered_data = NULL;
+  $assets_html = \Drupal::database()->select('queue', 'q')
+    ->fields('q', ['data'])
+    ->condition('q.expire', 0)
+    ->condition('q.name', 'process_bulk_email_asset_content', '=');
+  $assets_results = $assets_html->execute()->fetchAll();
+
+  foreach ($assets_results as $asset_result) {
+    $email_rendered_content = unserialize($asset_result->data);
+    $email_rendered_data = $email_rendered_content;
+  }
+
+  return $email_rendered_data;
+}
+
+/**
+ * Implements hook_ENTITY_TYPE_insert for node entities.
+ */
+function ai_contribute_usecase_node_insert(NodeInterface $node) {
+  
+  if ($node->hasField('field_uniqid')) {
+    $uniqid_session = \Drupal::service('tempstore.private')->get('ai_contribute_usecase');
+    $uniqid = $uniqid_session->get('uniqid');
+    if (!empty($uniqid)) {
+      $query = \Drupal::database()->select('ai_other_tag');
+      $query->condition('uniqid', $uniqid, '=');
+      $count = $query->countQuery()->execute()->fetchField();
+      if ($count > 0) {
+        \Drupal::database()->update('ai_other_tag')
+          ->fields([
+            'uniqid' => $node->id(),
+          ])
+          ->condition('uniqid', $uniqid, '=')
+          ->execute();
+      }
+      if (!empty($uniqid)) {
+        $uniqid_session->delete('uniqid');
+        $uniqid_session->delete('is_new_asset');
+      }
+    }
+  }
+}

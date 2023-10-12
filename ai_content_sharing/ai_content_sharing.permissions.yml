@@ -1,0 +1,4 @@
+administer content email sharing:
+  title: Administer Content Email Sharing
+  description: Provides the administer content email sharing Settings
+  restrict access: true

@@ -1,0 +1,415 @@
+<?php
+
+/**
+ * @file
+ * Install file.
+ */
+
+use Drupal\Core\Database\Database;
+use Drupal\node\Entity\Node;
+use Drupal\node\NodeInterface;
+use Drupal\ai_utility\Services\AITaxonomyService;
+
+
+/**
+* 
+* Set default value to new field field_external_flag on all use_case_or_accelerator nodes.
+*/
+function ai_contribute_usecase_update_8001(&$sandbox) {
+  // Initialize some variables during the first pass through.
+  if (!isset($sandbox['total'])) {
+    $nids = \Drupal::entityQuery('node')
+      ->condition('type', 'use_case_or_accelerator')
+      ->execute();
+    $sandbox['total'] = count($nids);
+    $sandbox['current'] = 0;
+  }
+ 
+  $nodes_per_batch = 25;
+ 
+  // Handle one pass through.
+  $nids = \Drupal::entityQuery('node')
+    ->condition('type', 'use_case_or_accelerator')
+    ->range($sandbox['current'], $sandbox['current'] + $nodes_per_batch)
+    ->execute();
+ 
+  foreach($nids as $nid) {
+    $node = Node::load($nid);
+  
+  if((strtolower($node->field_business_driver_check) == 'yes') 
+    || (strtolower($node->field_s) == 'yes')
+    || ((strtolower($node->field_demo_video_check) == 'yes') && (strtolower($node->field_demo_video) == 'yes'))
+    || ((strtolower($node->field_have_demonstration) == 'yes') && (strtolower($node->field_live_demo_env_check) == 'yes'))
+    || ((strtolower($node->field_have_video_usecase) == 'yes') && (strtolower($node->field_usecase_video_check) == 'yes'))
+  ) {
+     $node->field_external_flag->value = 1;
+  }else{
+     $node->field_external_flag->value = 0;
+  }
+    $node->save();
+    $sandbox['current']++;
+  }
+ 
+  drupal_set_message($sandbox['current'] . ' nodes processed.');
+ 
+  if ($sandbox['total'] == 0) {
+    $sandbox['#finished'] = 1;
+  } else {
+    $sandbox['#finished'] = ($sandbox['current'] / $sandbox['total']);
+  }
+ 
+}
+
+/**
+ * Removing the unwanted term and assigning its asset to its parent term.
+ */
+function ai_contribute_usecase_update_8002() {
+  $tids = [405, 406,407, 408,409,411,412,410];
+
+  $query = \Drupal::database()->select('node__field_primary_domain', 'nfpd')
+    ->fields('nfpd', ['field_primary_domain_target_id'])
+    ->condition('field_primary_domain_target_id', $tids, 'IN');
+  $results = $query->execute();
+
+  while ($content = $results->fetchAssoc()) {
+    $update_tids[] = $content['field_primary_domain_target_id'];
+  }
+  \Drupal::database()->update('node__field_primary_domain')
+    ->fields(array('field_primary_domain_target_id' => 57))
+    ->condition('field_primary_domain_target_id', array_unique($update_tids), 'IN')
+    ->execute();
+  \Drupal::database()->update('node_revision__field_primary_domain')
+    ->fields(array('field_primary_domain_target_id' => 57))
+    ->condition('field_primary_domain_target_id', array_unique($update_tids), 'IN')
+    ->execute();
+
+  $controller = \Drupal::entityTypeManager()->getStorage('taxonomy_term');
+  $entities = $controller->loadMultiple($tids);
+  $controller->delete($entities);
+  print('Taxononmy deleted successfully.');
+}
+
+/**
+ * Setting the status as zero for the contents with moderation state as Pending review
+ */
+function ai_contribute_usecase_update_8003() {
+  $database = \Drupal::database();
+	
+  \Drupal::database()->update('node_field_data')
+  ->fields(['status' => 0])
+  ->condition('type','use_case_or_accelerator', '=')
+  ->condition('moderation_state','needs_review', '=')
+  ->execute();
+
+  $query_1 = \Drupal::database()->select('node_field_revision', 'nfr')
+  ->fields('nfr', ['vid'])
+  ->condition('nfr.moderation_state','needs_review');
+  $query_1->join('node_field_data', 'nfd','nfr.vid = nfd.vid');
+  $query_1_result =$query_1->execute();
+
+  foreach ($query_1_result as $result) {
+    $vids[] = $result->vid;
+  }
+	
+  $query_2 = \Drupal::database()->update('node_field_revision');
+  $query_2->fields(['status' => 0]);
+  $query_2->condition('vid', array_unique($vids),'IN');
+  $query_2->execute();
+}
+
+/**
+ * Resolving the filter count issue for Domain categories.
+ */
+function ai_contribute_usecase_update_8004() {
+  $database = \Drupal::database();
+
+  try {
+    $transaction = $database->startTransaction();
+
+    $update_vocabularys = [
+      0 => [
+        'domain' =>
+        ['field' => 'field_usecase_domain']],
+    ];
+
+    foreach ($update_vocabularys as $update_vocabulary) {
+      $vocabulary_name = array_keys($update_vocabulary);
+      $query = \Drupal::entityQuery('taxonomy_term');
+      $query->condition('vid', $vocabulary_name[0]);
+      $tids = $query->execute();
+
+      $field_name = $update_vocabulary[$vocabulary_name[0]]['field'];
+
+      $values = ['type' => 'use_case_or_accelerator', $field_name => array_values($tids)];
+      $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadByProperties($values);
+      foreach ($nodes as $node) {
+        $getTermIds = $node->$field_name->getValue();
+        $prev_changed_value = $node->get('changed')->getValue()[0]['value'];
+        $updateRecord = FALSE;
+        $node_parent_Ids = [];
+        foreach ($getTermIds as $termID) {
+          $taxonomy_term = \Drupal\taxonomy\Entity\Term::load($termID['target_id']);
+          if (!in_array($taxonomy_term->parent->target_id, array_column($getTermIds, 'target_id'))) {
+            if (!empty($taxonomy_term->parent->target_id)) {
+              if (!in_array($taxonomy_term->parent->target_id, $node_parent_Ids)) {
+                $node->get($field_name)->appendItem($taxonomy_term->parent->target_id);
+                $node_parent_Ids[] = $taxonomy_term->parent->target_id;
+                $updateRecord = TRUE;
+              }
+            }
+          }
+        }
+        if ($updateRecord) {
+          $node->save();
+
+          // Update the node changed date to the original changed date.
+          $query = \Drupal::database()->update('node_field_data');
+          $query->fields(['changed' => $prev_changed_value]);
+          $query->condition('nid', $node->id());
+          $query->execute();
+
+          \Drupal::logger($field_name . ' node ID updated')->log('debug', $node->id());
+
+          $select_query = \Drupal::database()->select('node_field_revision', 'nfr');
+          $select_query->fields('nfr', ['nid', 'vid', 'changed']);
+          $select_query->condition('nfr.nid', $node->id());
+          $select_query->orderBy('nfr.vid', 'DESC');
+          $select_query->range(0, 1);
+
+          $revision_records = $select_query->execute()->fetchObject();
+
+          if (!empty($revision_records)) {
+
+            if ($revision_records->changed != $prev_changed_value) {
+              // Update the node revision changed date to the original changed date.
+              $revision_update_query = \Drupal::database()->update('node_field_revision');
+              $revision_update_query->fields(['changed' => $prev_changed_value]);
+              $revision_update_query->condition('nid', $revision_records->nid);
+              $revision_update_query->condition('vid', $revision_records->vid);
+              $revision_update_query->execute();
+              \Drupal::logger($field_name . ' node revision version updated')->log('debug', $revision_records->nid . "--" . $revision_records->vid);
+            }
+          }
+        }
+      }
+    }
+  }
+  catch (Exception $ex) {
+      $transaction = $database->rollBack();
+      \Drupal::logger('Fiter data update : Filter data update issue')->log('debug', print_r($ex, true));
+      drupal_set_message(t('System encountered some error while saving the data.'));
+  }
+}
+
+/**
+ * Implements hook_schema().
+ */
+
+function ai_contribute_usecase_update_8005() {
+    $bulk_email_schema = [
+      'description' => 'Table to store the details of the bulk mail feature',
+      'fields' => [
+        'mail_sent_id' => [
+          'type' => 'serial',
+          'not null' => TRUE,
+          'description' => 'Unique ID for the mail sent feature.',
+        ],
+        'uid' => [
+        'description' => 'User id to whom the mail is sent.',
+        'type' => 'int',
+        'not null' => FALSE,
+        ],
+        'email' => [
+          'description' => 'Mail id of the user to whom the mail is sent.',
+          'type' => 'varchar',
+          'length' => '255',
+          'not null' => FALSE,
+        ],
+        'mail_stats' => [
+          'description' => 'Email to which the mail is sent.',
+          'type' => 'varchar',
+          'length' => '255',
+          'not null' => FALSE,
+        ],
+        'sent_result' => [
+          'description' => 'Sent mail status.',
+          'type' => 'int',
+          'size' => 'tiny',
+          'not null' => FALSE,
+        ],
+        'process_date' => [
+          'description' => 'Date on which the mail is sent.',
+          'type' => 'varchar',
+          'length' => '255',
+          'not null' => FALSE,
+        ],
+      ],
+      'primary key' => ['mail_sent_id'],
+    ];
+
+ $schema = Database::getConnection()->schema();
+ $schema->createTable('asset_bulk_email_details', $bulk_email_schema);
+}
+
+/**
+ * To update checklist submitted data for the older assets.
+ */
+function ai_contribute_usecase_update_8006() {
+  $database = \Drupal::database();
+  try {
+    $transaction = $database->startTransaction();
+
+    $nodes = \Drupal::entityTypeManager()->getStorage('node')->loadByProperties(['type' => 'use_case_or_accelerator',
+      'status' => 1]);
+
+    foreach ($nodes as $node) {
+      if ($node) {
+        $prev_changed_value = NULL;
+        if (empty($node->get('field_is_checklist_submitted')->value)) {
+          $prev_changed_value = $node->get('changed')->getValue()[0]['value'];
+          \Drupal::logger('Checklist-Submitted')->log('debug', print_r("Node " . $node->id() . "=== " . $node->get('field_is_checklist_submitted')->value, true));
+          $node->set('field_is_checklist_submitted', TRUE);
+          $node->save();
+
+          // Update the node changed date to the original changed date.
+          $query = \Drupal::database()->update('node_field_data');
+          $query->fields(['changed' => $prev_changed_value]);
+          $query->condition('nid', $node->id());
+          $query->execute();
+
+          \Drupal::logger($field_name . ' node ID updated')->log('debug', $node->id());
+
+          $select_query = \Drupal::database()->select('node_field_revision', 'nfr');
+          $select_query->fields('nfr', ['nid', 'vid', 'changed']);
+          $select_query->condition('nfr.nid', $node->id());
+          $select_query->orderBy('nfr.vid', 'DESC');
+          $select_query->range(0, 1);
+
+          $revision_records = $select_query->execute()->fetchObject();
+
+          if (!empty($revision_records)) {
+
+            if ($revision_records->changed != $prev_changed_value) {
+              // Update the node revision changed date to the original changed date.
+              $revision_update_query = \Drupal::database()->update('node_field_revision');
+              $revision_update_query->fields(['changed' => $prev_changed_value]);
+              $revision_update_query->condition('nid', $revision_records->nid);
+              $revision_update_query->condition('vid', $revision_records->vid);
+              $revision_update_query->execute();
+              \Drupal::logger($field_name . ' node revision version updated')->log('debug', $revision_records->nid . "--" . $revision_records->vid);
+            }
+          }
+        }
+      }
+    }
+  }
+  catch (Exception $ex) {
+    $transaction = $database->rollBack();
+    \Drupal::logger('Content data update: Issue while updating the checkist submitted data')->log('debug', print_r($ex, true));
+    drupal_set_message(t('System encountered some error while saving the data.'));
+  }
+}
+
+/**
+ * creates ai_other_tag table.
+ */
+function ai_contribute_usecase_update_8007() {
+ $other_tag = [
+      'fields' => [
+        'tagid' => [
+            'type' => 'serial',
+            'not null' => TRUE,
+            'description' => 'Unique ID for the Table.',
+          ],
+        'uniqid' => [
+            'type' => 'int',
+            'unsigned' => TRUE,
+            'not null' => TRUE,
+            'default' => 0,
+            'description' => 'Unique ID for of node',
+          ],
+        'other_type' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => 'Category Type(1=>partner,2=>feature,3=>framework)',
+        ],
+        'other_tag' => [
+          'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+        ],
+        'approved_by' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => 'Approver user id',
+        ],
+        'approved_date' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => 'Approved tag date ',
+        ],
+        'tag_status' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+          'description' => 'Status of tags(0=>not approved,1=>approved)',
+        ],
+      ],
+      'primary key' => ['tagid'],
+    ];
+
+  $schema = Database::getConnection()->schema();
+  $schema->createTable('ai_other_tag', $other_tag);
+}
+
+/**
+* update the required category
+*/
+function ai_contribute_usecase_update_8008(){
+  $updateCategories = [
+    'tech_stacks' => [
+      'source' => ['.','N/A'],
+      'destination' => ['Other'],
+      'table' => 'node__field_usecase_technology',
+      'revision_table' => 'node_revision__field_usecase_technology',
+      'field_name' => 'field_usecase_technology_target_id',
+    ],
+    'ai_features' => [
+      'source' => ['.','N/A'],
+      'destination' => ['Other'],
+      'table' => 'node__field_usecase_technology',
+      'revision_table' => 'node_revision__field_usecase_aifeatures',
+      'field_name' => 'field_usecase_aifeatures_target_id',
+    ],
+    'frameworks' => [
+      'source' => ['.','N/A'],
+      'destination' => ['Other'],
+      'table' => 'node__field_usecase_framework',
+      'revision_table' => 'node_revision__field_usecase_framework',
+      'field_name' => 'field_usecase_framework_target_id',
+    ],
+  ];
+  foreach ($updateCategories as $vid => $category) {
+    // 1. get the terms to be update(source ids)
+    $sourceIds = AITaxonomyService::getTermIdsOfNames($category['source'],$vid);
+    if(!empty($sourceIds)){
+      // 2. get terms to be replace with(destination ids)
+      $destinationId = AITaxonomyService::getTermIdsOfNames($category['destination'],$vid);
+      if(!empty($destinationId)){
+        // 3. update source tid with destination tid in main and revision tables
+        AITaxonomyService::updateIdsOfField($category['table'],$category['revision_table'],$category['field_name'],$sourceIds,$destinationId[0]);
+        // delete the source terms
+        AITaxonomyService::deteleTerms($sourceIds);
+      }
+    }
+  }
+}
+

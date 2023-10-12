@@ -1,0 +1,6 @@
+name: AI Contribute Usecase
+description: Change theme of usecase add page aka contribute.
+package: Custom
+type: module
+core_version_requirement: ^8 || ^9
+core: 8.x

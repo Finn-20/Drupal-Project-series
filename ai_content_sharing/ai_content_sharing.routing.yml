@@ -1,0 +1,15 @@
+ai_content_sharing.tracking_details:
+  path: 'admin/content/content-share-tracking-report'
+  defaults:
+    _form: '\Drupal\ai_content_sharing\Form\ContentShareTrackingReport'
+    _title: 'Contact Owner Tracking Report'
+  requirements:
+    _permission: 'view aig user report'
+
+ai_content_sharing.contentsharingconfig:
+  path: 'admin/config/content/content_email_sharing/config'
+  defaults:
+    _form: '\Drupal\ai_content_sharing\Form\ContentSharingConfigForm'
+    _title: 'Content Sharing Configurations'
+  requirements:
+    _permission: 'administer content email sharing'

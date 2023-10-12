@@ -1,0 +1,129 @@
+<?php
+
+/**
+ * @file
+ * This is my module.
+ */
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Cache\Cache;
+use Drupal\node\Entity\Node;
+use Drupal\user\Entity\User;
+use Drupal\Core\Access\AccessResult;
+
+/**
+ * Implements hook_form_alter().
+ */
+function ai_content_user_access_form_node_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+  if ($form_id == 'node_use_case_or_accelerator_form' || $form_id == 'node_use_case_or_accelerator_edit_form' || $form_id == 'node_asset_edit_form' || $form_id == 'node_asset_form') {
+    foreach (array_keys($form['actions']) as $action) {
+      if ($action != 'preview' && isset($form['actions'][$action]['#type']) && $form['actions'][$action]['#type'] === 'submit') {
+        $form['actions']['submit']['#submit'][] = 'ai_content_user_access_form_submit';
+      }
+    }
+  }
+}
+
+/**
+ * Ai_content_user_access_form_submit.
+ */
+function ai_content_user_access_form_submit(array $form, FormStateInterface $form_state) {
+  // Update configuration.
+  $values = $form_state->getValues();
+  $nid = $values['nid'];
+  $grants = [];
+  $node = Node::load($nid);
+  // Get value of contributers userid.
+  $other_contb = $values['field_other_contributors'];
+  foreach ($other_contb as $other_contbs) {
+    $userid = $other_contbs['target_id'];
+    if ($userid == NULL) {
+      continue;
+    }
+    $realm = 'nodeaccess_uid';
+    $grant = [
+      'gid' => $userid,
+      'realm' => $realm,
+    // In grand tab the vie,edit values will be enable.
+      'grant_view' => 1,
+      'grant_update' => 1,
+      'grant_delete' => 0,
+    ];
+    $grants[] = $grant;
+  }
+  if ($node->isPublished()) {
+    $settings = \Drupal::configFactory()->get('nodeaccess.settings');
+    $role_alias = $settings->get('role_alias');
+    $role_map = $settings->get('role_map');
+    $allowed_roles = [];
+    $allowed_grants = $settings->get('grants');
+    foreach ($role_alias as $id => $role) {
+      if ($role['allow']) {
+        $allowed_roles[] = $id;
+      }
+    }
+
+    foreach ($allowed_roles as $role) {
+      $realm = 'nodeaccess_rid';
+      $grant = [
+        'gid' => $role_map[$role],
+        'realm' => $realm,
+      // In grand tab the vie,edit values will be enable.
+        'grant_view' => 1,
+        'grant_update' => 0,
+        'grant_delete' => 0,
+      ];
+      $grants[] = $grant;
+    }
+  }
+
+  // Save role and user grants to our own table.
+  \Drupal::database()->delete('nodeaccess')
+    ->condition('nid', $nid)
+    ->execute();
+  foreach ($grants as $grant) {
+    $id = db_insert('nodeaccess')
+      ->fields([
+        'nid' => $nid,
+    // Userid.
+        'gid' => $grant['gid'],
+        'realm' => $grant['realm'],
+        'grant_view' => $grant['grant_view'],
+        'grant_update' => $grant['grant_update'],
+        'grant_delete' => $grant['grant_delete'],
+      ])
+      ->execute();
+  }
+  \Drupal::entityTypeManager()->getAccessControlHandler('node')->writeGrants($node);
+  // drupal_set_message(t('Grants saved.'));.
+  $tags = ['node:' . $node->id()];
+  Cache::invalidateTags($tags);
+}
+
+/**
+ * Implements ai_content_user_access_node_access().
+ */
+function ai_content_user_access_node_access($node, $op, $account) {
+  // only for use_case_or_accelerator
+  if($node->bundle() == 'use_case_or_accelerator'){
+    // allow all access to admin n superadmin
+    $current_user_roles = \Drupal::currentUser()->getRoles();
+    if(in_array('super_webadmin', $current_user_roles) || in_array('administrator', $current_user_roles)){
+      return AccessResult::allowed();
+    }
+    elseif(!empty($node->get('moderation_state')->getValue()[0]['target_id'])){
+      $state = $node->get('moderation_state')->getValue()[0]['target_id'];
+        if ($state == 'archived' && $op == 'update') {
+          return AccessResult::forbidden();
+        }elseif(($state == 'needs_review' || $state == 'submit_for_review') && $op == 'update'){
+        $contributors = array();
+        getcontributor_ids($node,$contributors);
+        $current_user = \Drupal::currentUser();
+        if(in_array($current_user->id(),$contributors)){
+          return AccessResult::allowed();
+        }
+        return AccessResult::forbidden();
+      }
+    }
+  }
+}

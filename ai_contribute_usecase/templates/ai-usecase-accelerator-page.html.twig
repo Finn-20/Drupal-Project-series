@@ -1,0 +1,273 @@
+
+{%
+  set classes = [
+    node.bundle|clean_class,
+    node.isPromoted() ? 'is-promoted',
+    node.isSticky() ? 'is-sticky',
+    not node.isPublished() ? 'is-unpublished',
+    view_mode ? view_mode|clean_class,
+    'clearfix',
+  ]
+%}
+{{ attach_library('colorbox/colorbox') }}
+{{ attach_library('colorbox/init') }}
+{{ attach_library('colorbox/default') }}
+
+{% set class = "with-edit-button"%}
+{% set class = "nocasevalue"%}
+
+<div class="use-case" {{ attributes }}>
+  <div class="row">
+    <div class="col-sm-12 usecase-banner-wrapper">
+      <div class="usecase-header-info">
+        
+        <div class="usecase-accelerator-type">
+            {{ usecase_or_accelerator }}
+          </div>
+        <h1 class="page-header">{{ node_title }}</h1>
+        <div class="usecase-accelerator-other-details-wrapper">
+          <div class="usecase-accelerator-other-details">
+            <div class="usecase-accelerator-other-details-left">
+              <div class="usecase-accelerators-author-contributor">
+                {{ author_contributor_name }}
+              </div>
+              <div class="usecase-accelerators-rating-and-views">
+                <div class="usecase-star-rating">
+                  {{ content_field_rate }}
+                  <div class="usecase-num-of-views">
+                    {{ node_stats }}
+                  </div>
+				{%  if comment_count != '0' and comment_count != null %}
+                  <div class="usecase-comments-count">
+                    {{ comment_count }}
+                  </div>
+				{% endif %}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="usecase-accelerator-other-details-right">
+
+            <div class="use_case_demo">
+              <div class="live-demo-wrapper">
+              {% if have_demonstration is not empty %}
+                <div id="center" class="live-demo-link">
+                <a href="{{ have_demonstration }}" target="_blank">
+                      {{ 'Live Demo'|t }}
+                    </a>
+                </div>
+              {% endif %}
+            </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- usecase header details -->
+
+<div class="usecase-details-content-wrapper">
+  <div class="row usecase-content-info">
+  {% if moderation_state == 'archived' %}
+    <div class="node_disclaimer">{{ disclaimer }}
+    </div>
+    {% endif %}
+    <div class="col-md-8 col-sm-12 usecase-left-content-wrapper">
+      {% if business_driver_d is not empty %}
+	  <div class="Business-driver-field">
+        <h2>  {{ 'Business Driver'|t }} </h2>
+        {% autoescape false %}
+          {{ business_driver_d }}
+        {% endautoescape %}
+      </div>
+	  {% endif %}
+	  {% if solution_data is not empty %}
+        <div class="solution-field">
+      <h2> {{ 'Solution'|t }}</h2>
+      {% autoescape false %}
+        {{ solution_data}}
+      {% endautoescape %}
+      </div>
+	  {% endif %}
+      <div class="comment-form-wrapper">
+        <div class="comment-title">
+          {{ comment_title }}
+        </div>
+        
+      </div>
+    </div>
+    <div class="col-md-4 col-sm-12 usecase-right-content-wrapper">
+
+      <div class="button-wrapper {{ class }}">
+       <div class="use-case-add-to-collection">
+        <div class="row">
+        <div class="col-md-12 col-sm-12 col-lg-12 ">
+          {# favorites #}
+        </div>
+
+        </div>
+      </div>
+      <div class="add-to-fav-message-wrapper"></div>
+
+
+    </div>
+    {% if video_title is empty %}
+      <div class="usecase-right-image-video-wrapper">
+        <div class="use-case-assoc-image">
+          <img class="img-responsive use-case-img" src="{{ associated_image | image_style('node_detail_page') }}" />
+        </div>
+        {% if demo_video is not empty %}
+          <div class="demo-video-wrapper">
+            <div class="demo-video-label">
+              <span>{{ 'Demonstration Video'|t }} </span>
+            </div>
+            <div class="video-wrapper">
+            <video controls="controls" class="lozad video-after-page-load"  poster="/{{ directory }}/images/use-case-banner.png">
+              <source data-video-path="{{ demo_video.fileurl }}" src="{{ demo_video.fileurl }}" type="video/mp4">
+            </video>
+            </div>
+          </div>
+        {% endif %}
+		
+
+        {# % if demo_script_filesrc is not empty and demo_script_filename is not empty % #}
+          <div class="row script_video_wrapper">
+            <div class="script_video_label">
+              <span class="text-label">
+                {{ 'Script'|t }} 
+              </span>
+              <a href="{{demo_script_filesrc}}">
+                {{ demo_script_filename |slice(0, 20) ~ '...' }}
+              </a>
+            </div>
+          </div>
+        {#% endif % #}
+
+        {% if demo_video is empty and usecase_link is not empty %}
+          <div class="demo-video-wrapper">
+            <div class="demo-video-label">
+              <span>{{ 'Usecase Video'|t }}</span>
+            </div>
+            <div class="video-wrapper">
+              <video controls="controls" class="lozad video-after-page-load"  poster="/{{ directory }}/images/use-case-banner.png">
+              <source data-video-path="{{ usecase_link.fileurl }}" src="{{ usecase_link.fileurl }}" type="video/mp4">
+            </video>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+      {% if filearray or coll_filearray %}
+        <div class="download_attachments_wrapper">
+          <div class="asset-download">
+            <h2>{{ 'Download'|t }} <span></span></h2>
+            <!-- Assets and Collaterals -->
+            {% set i = '0' %}
+            {% for filearrays in filearray %}
+              {% if filearrays.fileext == 'jpg' or filearrays.fileext == 'png' or filearrays.fileext == 'jpeg' or filearrays.fileext == 'gif' %}
+                <div class="{{ filearrays.class }}">
+                  <a href="{{ filearrays.fileurl }}" class="{{ filearrays.fileext }} colorbox cboxElement" data-colorbox-gallery="gallery-beforeafter">
+                    <span class="image_collfilename">{{ filearrays.fileName }}</span>
+                  </a>
+                  <span class="filesize">({{ filearrays.fileSize }})</span>
+                </div>
+        {% elseif filearrays.fileext == 'mp4' or filearrays.fileext == 'wmv' %}
+                <div class="{{ filearrays.class }}">
+                  <a href="#" id= "video{{ i }}" class="{{ filearrays.fileext }} video"  data-video="{{ filearrays.fileurl }}" data-toggle="modal" data-target="#videoModal{{ i }}" >
+                    {{ filearrays.fileName }}
+                  </a>
+                  <span class="filesize">({{ filearrays.fileSize }})</span>
+                </div>
+          <div class="modal fade" id="videoModal{{ i }}" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+            <div class="modal-dialog">
+              <div class="modal-content">
+              <div class="modal-body">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                          <span aria-hidden="true">X</span>
+                        </button>
+              <video controls width="100%">
+                <source src="{{ filearrays.fileurl }}" type="video/mp4">
+              </video>
+                </div>
+            </div>
+            </div>
+          </div>
+          {% set i = i + 1 %}
+        {% else %}
+            <div class="{{ filearrays.class }}">
+              {% if rating_required %}
+                <a data-toggle="modal" class="{{ filearrays.fileext }}" data-target="#usecase_content_feedback_modal" data-target-id="download-{{ loop.index }}" rel="nofollow" download>{{ filearrays.fileName }}</a>
+                    <a href="{{ filearrays.fileurl }}" id="download-{{ loop.index }}" class="hidden" download>{{ filearrays.fileName }}</a>
+                      <span class="filesize">({{ filearrays.fileSize }})</span>
+                  {% else %}
+                    <a href="{{ filearrays.fileurl }}" class="{{ filearrays.fileext }}" target="_blank" download>{{ filearrays.fileName }}</a>
+                      <span class="filesize">({{ filearrays.fileSize }})</span>
+                  {% endif %}
+              </div>
+        {% endif %}
+        {% endfor %}
+        </div>
+        </div>
+    {% endif %}
+    {% if moderation_state != 'archived' %}
+      {% if contact_title is empty %}
+      <div class="contact-the-owner-wrapper">
+        <div class="contact-owner-title">
+          {{ 'Contact Owner'|t }}
+        <span></span>
+        </div>
+        <div class="contact-owner-details">
+          <div class="contact-owner-namne">
+            {{ contact_owner_name }}
+          </div>
+          <div class="contact-owner-email">
+            <a class="use-ajax" data-dialog-options="{&quot;width&quot;:740}" data-dialog-type="modal" href="/form/contact?cntid={{ nid }}" >
+              {{ 'Write me an email'|t }}
+            </a>
+          </div>
+          <div class="contact-owner-skype-call">
+            <a href="sip:{{ contact_owner_email }}">
+              {{ 'Call me on skype'|t }}
+            </a>
+          </div>
+          {% if owner_linkedin is not empty %}
+            <div class="contact-owner-linked-in">
+              <i class="fab fa-linkedin-in"></i>
+                <a href="{{ owner_linkedin }}" target="_blank">
+                  Connect on Linkedin
+                </a>
+            </div>
+          {% endif %}
+        </div >
+      </div>
+    {% endif %}
+    {% endif %}
+
+
+		{%  if drupal_view_result('case_study_card','block_1') is not empty %}
+		 <div class="case-study-card-block">
+	<div class="case-study-head-title">
+          {{ 'Case Studies'|t }}
+        <span></span>
+        </div>
+			{{ drupal_entity('block', 'views_block__case_study_card_block_1') }}
+		</div>
+	{% endif %}
+
+	 <div class="usecase-tags-wrapper">
+
+        {% if usecase_tags %}
+          {% for usecase_tag in usecase_tags %}
+            <a href="{{ usecase_tag.redirect_url }}" title="{{ usecase_tag.term_name }}" target="_blank">
+              <span class="usecase-tag">
+                {% set text = usecase_tag.term_name|render|striptags %}
+                {{ (text|length > 17 ? text|slice(0, 17)|join(' ') ~ ' ...' : text) }}
+              </span>
+            </a>
+          {% endfor %}
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>

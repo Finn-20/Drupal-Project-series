@@ -1,0 +1,57 @@
+ai_contribute_usecase.create_guide:
+  path: '/get_parent_primary_term/{parent_term}'
+  defaults:
+    _controller: '\Drupal\ai_contribute_usecase\Controller\ParenttermController::getParentTermofchild'
+  options:
+    parameters:
+      tab_id:
+        type: entity:node
+  requirements:
+    _permission: 'access content'
+    
+entity.node.ai_contribute_usecase:
+  path: '/node/{node}/{view_flag}'
+  defaults:
+    _controller: '\Drupal\ai_contribute_usecase\Controller\UserContentController::internalExternalPreview'
+    _title: 'Content Type View'
+  requirements:
+    _permission: 'access content'
+    node: \d+
+
+ai_contribute_usecase.processBulkMails:
+  path: '/usecase/process-bulk-mails'
+  defaults:
+    _controller: '\Drupal\ai_contribute_usecase\Controller\AssetMailNofiticationController::assetToProcess'
+  requirements:
+    _permission: 'administer site configuration'
+
+ai_contribute_usecase.processBulkMails_configuration:
+  path: 'admin/config/content/bulk-email-settings'
+  defaults:
+    _form: '\Drupal\ai_contribute_usecase\Form\AIAssetBulkMailConfigForm'
+    _title: 'Bulk email settings'
+  requirements:
+    _permission: 'administer site configuration'
+
+ai_contribute_usecase.othermodal:
+  path: "/ai-usecase/other-modal/{other_type}/{uniqid}"
+  defaults:
+    _controller: '\Drupal\ai_contribute_usecase\Controller\OtherFieldController::ai_other_field_modal_form'
+    _title: "Other Field"
+  requirements:
+    _permission: 'access content'
+
+ai_contribute_usecase.other_field:
+  path: '/ai_contribute_usecase/other_field'
+  defaults:
+    _controller: '\Drupal\ai_contribute_usecase\Controller\OtherFieldController::otherFieldTag'
+  requirements:
+    _permission: 'access content'
+
+ai_contribute_usecase.other_field_form:
+  path: '/ai_contribute_usecase/other_field_form'
+  defaults:
+    _form: '\Drupal\ai_contribute_usecase\Form\OtherFieldForm'
+    _title: 'Other Field Form'
+  requirements:
+    _permission: 'access content'

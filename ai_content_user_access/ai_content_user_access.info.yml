@@ -1,0 +1,7 @@
+name: AI Content Node User Access
+description: AI Gallery Content Node User Access
+package: Custom
+type: module
+core_version_requirement: ^8 || ^9
+dependencies:
+  - nodeaccess

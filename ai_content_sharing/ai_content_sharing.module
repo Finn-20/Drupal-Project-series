@@ -1,0 +1,77 @@
+<?php
+
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\ai_content_sharing\AIContentEmailSharingStorage;
+
+function ai_content_sharing_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+  $current_userid = \Drupal::currentUser()->id();
+ if ($form_id == 'webform_submission_email_sharing_add_form') {
+    $nid = $_GET['cntid'];
+	
+    $is_submitted = 0;
+    $time = \Drupal::time()->getCurrentTime();
+    $submission_id = 0;
+    $tracking_id = 0;
+    
+    $user_input = $form_state->getUserInput();
+    if (isset($user_input['tracking_id']) && !empty($user_input['tracking_id'])) {
+      $tracking_id = $user_input['tracking_id'];
+    }
+    $confirmation_modal = $form_state->get('webform_confirmation_modal');
+    $is_confirmation_modal = isset($confirmation_modal) && !empty($confirmation_modal);
+    if (!empty($nid) && !empty($current_userid) && empty($tracking_id) && (!$is_confirmation_modal)) {
+      $entry = [
+        'nid' => $nid,
+        'uid' => $current_userid,
+        'is_submitted' => $is_submitted,
+        'timestamp' => $time,
+        'submission_id' => $submission_id
+      ];
+      $tracking_id = AIContentEmailSharingStorage::insert($entry); 
+    }
+    if (!empty($tracking_id)) {
+	
+      $form['elements']['tracking_id']['#default_value'] = $tracking_id;
+    }
+    if (!in_array('ai_contact_sharing_submit', $form['actions']['submit']['#submit'])) {
+      array_unshift($form['actions']['submit']['#submit'], 'ai_contact_sharing_submit');
+    }
+  }
+  return $form;
+}
+
+function ai_contact_sharing_submit(&$form, FormStateInterface $form_state) {
+  if (null != $form_state->getValue('tracking_id')) {
+    $data = [];
+    $entry = AIContentEmailSharingStorage::load($form_state->getValue('tracking_id'));
+    $entry = $entry[0];
+    foreach ($entry as $key => $value) {
+      $data[$key] = $value;
+    }
+    $data['is_submitted'] = 1;
+    
+    $last_submission_id = AIContentEmailSharingStorage::getWebformSubmissionId();
+    if (isset($last_submission_id[0]->sid) && !empty($last_submission_id[0]->sid)) {
+      $data['submission_id'] = ($last_submission_id[0]->sid+1);
+    }
+    
+    AIContentEmailSharingStorage::update($data, 'tracking_id');
+  }
+}
+
+
+/**
+ * Implements hook_cron().
+ *
+ * This is a cron job which works as a part of scheduled job ,
+ * this function will delete all the tracking report files.
+ */
+function ai_contact_sharing_cron() {
+  $dir = \Drupal::service('file_system')->realpath(file_default_scheme() . "://") . '/tracking_data';
+  $tracking_files = scandir($dir);
+  foreach ($tracking_files as $file) {
+    if(is_file($dir . '/' . $file)) {
+      unlink($dir . '/' . $file); // delete file
+    } 
+  }
+}
