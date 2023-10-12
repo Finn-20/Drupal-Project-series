@@ -1,0 +1,102 @@
+<div class="glossary-ai_partners"> {{ glossary.arg_letters }}
+{% if glossary.arg_letters is empty %} 
+<span><a href="/partnersdetails" class="all_terms_active">All{{glossary.arg_letters}}</a></span>
+{% endif %}
+
+{% for gloss in glossary %}
+	{% if gloss.arg_letters is empty %}
+		<span><a href="/partnersdetails/{{ gloss.term_alphabets }}" class="all_terms_active">{{ gloss.term_alphabets | capitalize }}</a></span>
+	{% else %}
+		{% if gloss.arg_letters == gloss.term_alphabets %}
+			<span><a href="/partnersdetails/{{ gloss.term_alphabets }}" class="term_cls_active">{{ gloss.term_alphabets | capitalize }}</a></span>
+		{% else %}
+			<span><a href="/partnersdetails/{{ gloss.term_alphabets }}" class="term_cls_not_active">{{ gloss.term_alphabets | capitalize }}</a></span>
+		{% endif %}
+   {% endif %}
+	
+{% endfor %}
+</div>
+<div class="view-id-ai_partners">
+{% for term_name in term_names %} 
+<div class="ai_partners_grouping_level_0">
+<div class="ai_partners_grouping_0_title collapsed"><h2 class="partner_title">{{ term_name.termname_title }}</h2></div>
+	<div class="ai_partners_grouping_0_content"> 
+		<div class="ai_partners_grouping_level_1">
+			<div class="ai_partners_grouping_1_title collapsed">
+				<div class="partner_desc">{{ term_name.deck_descprition }}</div>
+			</div>
+			<div class="ai_partners_grouping_1_content"> 
+				<div class="ai_partners_grouping_level_2">
+				   {% if term_name.terms_related_featuredcontent is not empty %}
+					<div class="ai_partners_grouping_2_content">
+					<div class="views-limit-grouping-group">
+					<div class="featured_content_wrapper">
+						
+						<div class="use_case_label"><h4>Featured Content</h4></div>
+						<div class="featured_use_cases">
+								{% for terms_related_featuredcontent in term_name.terms_related_featuredcontent %} 
+									<div class="views-row views-row-0">
+										<div class="Detailed-page"> 
+										{{ terms_related_featuredcontent }}
+										</div>
+									</div>
+								{% endfor %}
+								<div style="clear: both;"></div>	
+						</div>
+					</div>
+					</div>
+					</div>
+					{% endif %}
+					<div class="ai_partners_grouping_2_content">
+						<div class="views-limit-grouping-group">
+							<div class="capability_sales_deck_wrapper">
+							{% if term_name.cap_script_fileName is not empty %}
+								<div class="partner_capability_deck">
+									<h2>Capability Deck</h2>
+									<div class="capability_deck_file">
+										<div class="cap_sale_deck"> <a href="{{ term_name.cap_script_fileSRC }}" target="_blank" class="{{ term_name.cap_script_fileext }}" title="{{ term_name.cap_script_fileName }}">{{ term_name.cap_script_fileName }}</a> </div>
+									</div>
+								</div>
+							{% endif %}
+							{% if term_name.cap_script_fileName is not empty %}
+								<div class="partner_capability_deck">
+									<h2>Sales Deck</h2>
+									<div class="capability_deck_file"> 
+											<div class="cap_sale_deck"> 
+											<a href="{{ term_name.sales_script_fileSRC }}" target="_blank" class="{{ term_name.sales_script_fileext }}" title="{{ term_name.cap_script_fileName }}">{{ term_name.cap_script_fileName }}</a>
+											</div>
+										
+									</div>
+								</div>
+							{% endif %}
+							<div style="clear: both;"></div>
+							</div>
+						</div>
+						<div class="ai_partners_grouping_2_title collapsed">  
+						{% if term_name.playbook_script_fileName is not empty %}
+							<div class="partner_capability_deck">
+							<h2>Playbook</h2>
+								<div class="capability_deck_file"> 
+									<div class="cap_sale_deck">
+										<a href="{{ term_name.playbook_script_fileSRC }}" target="_blank" class="{{  term_name.playbook_script_fileext }}" title="file-sample_100kB_1.odt">{{ term_name.playbook_script_fileName }}</a> 
+									</div>
+								</div>
+							</div>
+						{% endif %}
+						{% if term_name.webinar_script_fileName is not empty %}
+							<div class="partner_capability_deck">
+							<h2>Webinar</h2>
+								<div class="capability_deck_file">
+								<a href="{{ term_name.webinar_script_fileSRC }}" target="_blank" class="{{  term_name.webinar_script_fileext }}" title="file-sample_100kB_1.odt">{{ term_name.webinar_script_fileName }}</a> 	
+								</div>
+							</div>
+						{% endif %}
+					</div>
+					</div>
+				</div>
+			</div> 
+		</div>
+	</div>
+</div>
+{% endfor %}
+</div>

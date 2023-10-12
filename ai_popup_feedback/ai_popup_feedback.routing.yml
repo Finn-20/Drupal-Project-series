@@ -1,0 +1,9 @@
+# ai_custom.webform_to_node_redirect:
+  # path: '/webform_to_node_redirection'
+  # defaults:
+     # _controller: '\Drupal\ai_custom\Controller\AiController::webformToNodeRedirect'
+  # requirements:
+    # _permission: 'access content'\ai_popup_feedback
+ai_popup_feedback.render:
+    requirements:
+        _permission: 'access content'

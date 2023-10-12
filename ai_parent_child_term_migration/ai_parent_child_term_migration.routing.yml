@@ -1,0 +1,15 @@
+ai_parent_child_term_migration.migrate_parentchild:
+  path: '/admin/config/content/ai_parent_child_term_migration/parentchild'
+  defaults:
+    _form: '\Drupal\ai_parent_child_term_migration\Form\MigrateParentChildForm'
+    _title: 'Parent Child Term Migration'
+  requirements:
+    _permission: 'administer content'
+    
+ai_parent_child_term_migration.migrate_parentchildterms:
+  path: '/admin/config/content/migrate_parentchildterms'
+  defaults:
+    _controller: '\Drupal\ai_parent_child_term_migration\Controller\AIParentChildTermController::MigrateParentChildTerms'
+    _title: 'Parent Child Term Migration Nodes'
+  requirements:
+    _permission: 'administer content'

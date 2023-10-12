@@ -1,0 +1,112 @@
+<div class="node-view-link">
+  <div class="usecase-icon"><a href="{{ node_view_link }}" target="_blank"><img src="/themes/custom/aitheme/images/edit-tool/use-case-bulb.png" /></a></div>
+  <div class="usecase-link">Link to <a href="{{ node_view_link }}" target = "_blank">{{ node_title }}</a></div>
+  <div style="clear: both;"></div>
+</div>
+{% if message %}
+  <div class="message">
+    <h3>{{ message }}</h3>
+  </div>
+{% endif %}
+
+<div class="form_wrapper">
+  <form id="{{ ai_ideachat_form['#id']}}" method="{{ ai_ideachat_form['#method'] }}">
+  
+    <div class="category_wrapper row">
+      
+      <div class="col-sm-4 questions-wrapper" id="category-height-reference">
+	    <div class="category_name">Idea Information</div>
+	    <div class="subcategory-questions-wrapper">
+    	    <div class="subcategory-wrapper" data-class="sub-category-">
+    		  <div class="subcategory_name">Idea Title</div>
+    		  <div class="questions_wrapper">
+    			  <div class="question">{{ questions_with_category.idea_title}}</div>
+    		   </div>
+    		</div>
+			<div class="subcategory-wrapper" data-class="sub-category-">
+    		  <div class="subcategory_name">Idea Description</div>
+    		  <div class="questions_wrapper">
+    			  <div class="question">{{ questions_with_category.ideadesc}}</div>
+    		   </div>
+    		</div>
+			<div class="subcategory-wrapper" data-class="sub-category-">
+    		  <div class="subcategory_name">Contributor</div>
+    		  <div class="questions_wrapper">
+    			  <div class="question">{{ questions_with_category.ideaauthor}}</div>
+    		   </div>
+    		</div>
+		</div>
+		</div>
+		
+	
+		<div class="col-sm-4 answers-wrapper">
+          <div class="answer-heading {{ ansHeadingClass }}">
+			Idea Owner’s comment​
+          </div>
+		  <div class="subcategory-ans-wrapper">
+        	 {% for answers in questions_with_category.author_answers %} 
+				{% set sid = answers.answer_chat_id %}
+				{% set ans = 'answer_' ~ 'chatans' %}
+				{% if attribute(ai_ideachat_form, ans) is defined %}
+					{% set ansOuterClass = 'sub-category-answers-outer' %}
+				{% else %}
+					{% set ansOuterClass = 'sub-category-answers-outer full-height' %}
+				{% endif %}
+				<div class="answers sub-category-{{ subcategory.sub_category_id }}">
+					<div class="{{ ansOuterClass }}">
+						<div class="subcategory_answers">
+							<span class="user-submission">{{ answers.formatted_date }} ~{{ answers.submitted_by }}:</span> {{ answers.chat_answer|raw }}
+						</div> 
+					</div>
+				</div>
+        	{% endfor %}
+			
+			<div class="question_input_wrapper">
+					{{ ai_ideachat_form.answer_chatans}}
+				</div> 
+           </div>
+		</div>
+        
+		<div class="col-sm-4 reviewer_comments_wrapper">
+			<div class="reviewer-heading {{ ansHeadingClass }}">
+			Region Owner's Comment
+			</div>
+			<div class="subcategory-reviewer-wrapper">
+			{% for reviewers in questions_with_category.reviewer_answers %} 
+				{% set sid = reviewers.answer_chat_id %}
+				{% set review = 'review_' ~ 'chatans' %}
+				{% if attribute(ai_ideachat_form, review) is defined %}
+					 {% set reviewOuterClass = 'sub-category-answers-outer' %}
+				{% else %}
+					 {% set reviewOuterClass = 'sub-category-answers-outer full-height' %}
+				{% endif %}
+				<div class="answers sub-category-{{ subcategory.sub_category_id }}">
+					<div class="{{ reviewOuterClass }}">
+						<div class="subcategory_answers"><span class="reviewer-submission">{{ reviewers.formatted_date }} ~{{ reviewers.submitted_by }}:</span> {{ reviewers.chat_answer|raw }}</div>
+					</div>
+				</div>
+					{% endfor %}
+					<div class="comment_input_wrapper">
+						{{ ai_ideachat_form.review_chatans}}
+					</div> 
+				
+			</div>
+		</div>
+		<div style="clear: both"></div>
+	</div>
+	{{ ai_ideachat_form.form_build_id }}
+	{{ ai_ideachat_form.form_token }}
+	{{ ai_ideachat_form.form_id }}
+    <div class="checklist_action_wrapper">
+		<div class="checklist_submit_actions">
+		  {{ ai_ideachat_form.actions }}
+		</div>
+		<div class="checklist_no_submit_info">
+		 {{ ai_ideachat_form.no_submit_info }}
+		</div>
+		
+		<div class="clearfix"></div>
+    </div>
+    
+  </form>
+</div>

@@ -1,0 +1,7 @@
+<?php
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\node\Entity\Node;
+use Drupal\taxonomy\Entity\Term;
+/** 
+ * Migrate current terms into enabled mode
+ **/

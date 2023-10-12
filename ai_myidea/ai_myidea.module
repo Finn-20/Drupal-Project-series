@@ -1,0 +1,289 @@
+<?php
+
+/**
+ * @file
+ * Ai contribute module.
+ */
+
+use Drupal\user\Entity\User;
+use Drupal\Core\Render\Element;
+use Drupal\Core\Url;
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Component\Utility\Unicode;
+use Drupal\node\Entity\Node;
+use Drupal\taxonomy\Entity\Term;
+//use Drupal\ai_myidea\Services\AIMyideaNotifyFavoriteService;
+use Drupal\Component\Render\PlainTextOutput;
+use Drupal\Component\Utility\Html;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+
+
+/**
+ * Implements hook_theme().
+ */
+function ai_myidea_theme($existing, $type, $theme, $path) {
+  return [
+    'ai_ideachat_page' => [
+      'variables' => [
+        'questions_with_category' => NULL,
+        'ai_ideachat_form' => NULL,
+        'node_view_link' => NULL,
+        'node_title' => NULL,
+        'message' => NULL,
+      ],
+      'render element' => 'form',
+    ],
+  ];
+}
+/**
+ * Implements hook_form_alter().
+ *
+ * Array $form
+ * \Drupal\Core\Form\FormStateInterface $form_state
+ *  unknown $form_id.
+ */
+function ai_myidea_form_alter(array &$form, FormStateInterface $form_state, $form_id) {
+
+  if($form_id == 'node_my_idea_form' || $form_id == 'node_my_idea_edit_form'){
+	$form['#title'] = 'Add new shortcut';
+	$form['#title'] = 'Submit Idea';
+	$current_userid = \Drupal::currentUser()->id();
+	$user_account = User::load($current_userid);
+	$display_name = $user_account->getUsername();
+	$firstName = (NULL != $user_account->field_first_name->value) ? Unicode::ucfirst(Unicode::strtolower($user_account->field_first_name->value)) : '';
+	$lastName = (NULL != $user_account->field_las->value) ? Unicode::ucfirst(Unicode::strtolower($user_account->field_las->value)) : '';
+	if ((NULL != $firstName) && (NULL != $lastName)) {
+		$name = t('@last_name, @first_name', [
+		  '@first_name' => $firstName,
+		  '@last_name' => $lastName,
+		]
+		);
+	}
+	
+	$form['field_author']['widget'][0]['value']['#attributes'] = ['disabled' => 'disabled'];
+	$form['field_author']['widget'][0]['value']['#default_value'] =$name;
+	$form['field_idea_contributor_id']['widget'][0]['value']['#default_value'] =$current_userid;
+	$form['actions']['submit']['#submit'][] = '_ai_chat_myidea_add_chat_form_submit';
+  }
+  if($form_id == 'node_my_idea_edit_form'){
+	unset($form['moderation_state']['widget'][0]['#options']['idea_closed']); 
+	$form['moderation_state']['widget'][0]['#options']['idea_submitted'] = "Update Idea";
+	/* $form['actions']['updateidea'] = array(
+	'#type' => 'submit', 
+	'#value' => t('Update Idea'), 
+	//'#atributes' => ['class' => ['submit_goto_idea']],
+	); */
+	$node = $form_state->getFormObject()->getEntity();
+	$chaturl = '/node/'.$node->id().'/ideachat'; 
+	$url = Url::fromUserInput($chaturl);
+	
+	$form['actions']['goto_chat'] = [
+          '#type' => 'markup',
+          '#markup' => "<a href='".$chaturl."' class='gotochatidea' id='go_to_chatidea' >Go to Ideachat</a>",
+        ];
+	return $form;
+  }
+  
+}
+
+
+function goto_idea_chatpage($form, $form_state) { 
+	$node = $form_state->getFormObject()->getEntity();
+	$chaturl = '/node/'.$node->id().'/ideachat'; 
+	$url = Url::fromUserInput($chaturl);
+	$form_state->setRedirectUrl($url);
+}
+function _ai_chat_myidea_add_chat_form_submit(&$form, FormStateInterface $form_state) {  
+	$values = $form_state->getValues();
+	
+	$industry_values = [];
+    $domain_values = [];
+	$select_user_rows = [];
+	
+
+   foreach ($values['field_industry_idea'] as $key => $industry_value) {
+      if (isset($industry_value) && !empty($industry_value)) {
+		$industry_tid =  $industry_value['target_id'];
+		$industerm = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($industry_tid);
+		$industry_values[$industry_tid] = $industry_tid;
+        $industry_values[$industry_tid] = $industerm->name->value;
+		
+		$indus_query = \Drupal::database()->select('industry_owner_details','indusowner')
+			->fields('indusowner', ['industry_author'])
+			->condition('industry_terms',$industry_tid, '=');
+		$select_user_rows[] = $indus_query->execute()->fetchCol(0);
+		
+      }
+    }
+	//Domain
+	foreach ($values['field_domain_idea'] as $key => $domain_value) {
+      if (isset($domain_value) && !empty($domain_value)) {
+		$domain_tid = $domain_value['target_id'];
+		$domainterm = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($domain_tid);
+        $domain_values[$domain_tid] = $domain_tid;
+		$domain_values[$domain_tid] = $domainterm->name->value;
+		
+		$domain_query = \Drupal::database()->select('domain_owner_details','domainowner')
+		  ->fields('domainowner', ['domain_author'])
+		  ->condition('domain_terms',$domain_tid, '=');
+		$select_user_rows[] = $domain_query->execute()->fetchCol(0);
+      }
+    }
+	//Region
+	foreach ($values['field_region_idea'] as $key => $region_value) {
+      if (isset($region_value) && !empty($region_value)) {
+		$region_tid = $region_value['target_id'];
+		$regionterm = \Drupal::entityTypeManager()->getStorage('taxonomy_term')->load($region_tid);
+        $region_values[$region_tid] = $region_tid;
+		$region_values[$region_tid] =$regionterm->name->value;
+		
+		$region_query = \Drupal::database()->select('region_owner_details','regionowner')
+		  ->fields('regionowner', ['region_author'])
+		  ->condition('region_terms',$region_tid, '=');
+		$select_user_rows[] = $region_query->execute()->fetchCol(0);
+		
+      }
+    }
+	foreach($select_user_rows as $key=>$uid){
+		foreach($uid as $key1 => $val1) {
+			$reciverEmail[] = User::load($val1)->get('mail')->value;
+		}
+	}
+	$node = Node::load($values['nid']);
+	$moderation_state =  $node->get('moderation_state')->getString();
+	$current_path = \Drupal::service('path.current')->getPath();
+	$path_args = explode('/', $current_path);
+	$arg_letters = $path_args[2];
+	
+   if (isset($values['nid']) && !empty($values['nid'])) {
+	$mailManager = \Drupal::service('plugin.manager.mail');
+    $module = 'ai_myidea';
+    $langcode = \Drupal::currentUser()->getPreferredLangcode();
+    $send = TRUE;
+    $reciever = [];
+    $key = 'ai_myidea_notify_term_favorite';
+    $current_userid = \Drupal::currentUser()->id();
+    $from = User::load($current_userid)->get('mail')->value;
+	$reciever[] = $from;
+	$node_path_alias = \Drupal::service('path.alias_manager')->getAliasByPath('/node/' . $values['nid']);
+    $chatlist_data = [
+      'url' => \Drupal::request()->getSchemeAndHttpHost() . '/node/' . $values['nid'] . '/ideachat',
+      'usecase-url' => \Drupal::request()->getSchemeAndHttpHost() . $node_path_alias,
+    ];
+    
+	$node_title = $node->title->value;
+	$node_url  =  \Drupal::request()->getSchemeAndHttpHost() . '/node/' . $values['nid'] . '/ideachat';
+    $params = ['user' => User::load($current_userid), 'checklist' => $chatlist_data,'node_title'=>$node_title,'node_url'=>$node_url];
+	if (is_array($reciverEmail)) {
+		$to = implode(',', $reciverEmail);
+	}
+	
+	$result = $mailManager->mail($module, $key, $to, $langcode, $params, $from, $send);
+
+	$latest_revision = \Drupal::entityTypeManager()->getStorage('node')
+	  ->getQuery()
+	  ->latestRevision()
+	  ->condition('nid', $values['nid'])
+	  ->execute();
+	
+	if (isset($latest_revision) && !empty($latest_revision)) {
+      $latest_revision_id = array_keys($latest_revision)[0];
+      $node = \Drupal::entityTypeManager()->getStorage('node')->loadRevision($latest_revision_id);
+      $is_checklist_submitted = $node->get('field_idea_checklist_submitted')->value;
+      $redirect_to_checklist = $node->get('field_redirect_idea_checklist')->value;
+	
+      //If checklist not submitted, redirect user to checklist form page.
+       if ((isset($redirect_to_checklist) && !empty($redirect_to_checklist) && $redirect_to_checklist)
+        && (!isset($is_checklist_submitted) || empty($is_checklist_submitted) || !$is_checklist_submitted)) { 
+        //$check_url = '/node/' . $values['nid'] . '/ideachat';
+        $check_url = '/node/' . $values['nid'];
+        // Build URL with node id parameter of checklist page.
+        $url = Url::fromUserInput($check_url);
+        // Set redirection after form submission.
+        drupal_get_messages('status', TRUE);
+        drupal_set_message(t('Thank you! Your Idea has been successfully submitted for discussion. You will receive a chat link through mail once the region owner initiates the chat'));
+        $form_state->setRedirectUrl($url);
+      }
+    }
+	
+    if ($result['result'] != TRUE) {
+      $message = t('There was a problem sending your email notification to @email.', ['@email' => $to]);
+      \Drupal::logger('mail-log')->error($message);
+      return;
+    }
+    $query = \Drupal::database()->update('node__field_idea_mail_flag');
+      $query->fields(['field_idea_mail_flag_value' => 1]);
+      $query->condition('entity_id', $values['nid']);
+      $query->execute(); 
+    $message = t('An email notification has been sent to @email ', ['@email' => $to]);
+    \Drupal::logger('mail-log')->notice($message);
+	}
+  }
+/**
+ * Implements hook_entity_presave().
+ */
+function ai_myidea_entity_presave(EntityInterface $entity) {
+  // Check if it is Use case or accelerator content only.
+  if ($entity->bundle() == 'my_idea') {
+    // Get moderation state and checklist submitted values.
+    $moderation_state = $entity->get('moderation_state')->getString();
+
+    $is_checklist_submitted = $entity->get('field_idea_checklist_submitted')->value;
+    // If checklist not submitted and moderation state target is needs review, change it to draft.
+    if ($moderation_state == 'idea_submitted') {
+      $entity->set('field_redirect_idea_checklist', '1');
+      if (!isset($is_checklist_submitted) || empty($is_checklist_submitted) || !$is_checklist_submitted) {
+        $entity->set('moderation_state', 'idea_submitted');
+      }
+    }
+    if ($moderation_state == 'idea_review') {
+	$entity->set('moderation_state', 'idea_submitted');
+    } 
+
+  }
+}
+
+ 
+
+function ai_myidea_mail($key, &$message, $params) {
+  $options = [
+    'langcode' => $message['langcode'],
+  ];
+  $from = isset($message['reply-to']) ? $message['reply-to'] : \Drupal::config('system.site')->get('mail');
+  $message['from'] = $from;
+  $message['Return-Path'] = $from;
+  $message['headers']['Content-Type'] = 'text/html; charset=UTF-8; format=flowed; delsp=yes';
+  $message['headers']['Return-Path'] = $from;
+  $message['headers']['From'] = $from;
+  $message['headers']['Sender'] = $from;
+  //if (isset($params['bcc']) && !empty($params['bcc'])) {
+    $message['headers']['bcc'] = $params['bcc'];
+    $email_body = _ai_myidea_get_subscription_email_body($params);
+
+    if (!empty($email_body)) {
+     
+          $message['subject'] = '[Data and AI Gallery]: New Idea added.';
+          $message['body'][] = $email_body;
+         
+    }
+  //}
+}
+/**
+ *
+ */
+function _ai_myidea_get_subscription_email_body($params) {
+  $notify_users = '';
+  if (!empty($params)) {
+
+    $notify_users .= 'Hello Region Owners,<br/>
+      A new Idea added in Data and AI Gallery belongs to Industry,Domain&Region.Please review the idea and approve it<br/>';
+
+     $notify_users .= '<ul>
+        <li><strong>Idea Title:</strong> ' . $params['node_title'] . '</li>
+        <li><strong>Idea URL:</strong> ' . $params['node_url'] . '</li>';
+    $notify_users .= '</ul>'; 
+  }
+
+  return $notify_users;
+}

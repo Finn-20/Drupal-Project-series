@@ -1,0 +1,86 @@
+entity.node.ai_myidea:
+  path: '/node/{node}/ideachat'
+  defaults:
+    _controller: '\Drupal\ai_myidea\Controller\IdeaChatController::view'
+    _title: 'Idea Chat'
+  requirements:
+    _custom_access: '\Drupal\ai_myidea\AccessChecks\IdeaChatAccessCheck::access'
+    node: \d+
+
+ai_myidea.ideamoderationlist:
+  path: '/users/ideamoderation'
+  defaults:
+    _controller: '\Drupal\ai_myidea\Controller\IdeaChatController::ideamoderationlist'
+    _title: 'Idea Moderation List'
+  requirements:
+    _permission: 'administer ideachat'
+    
+ai_myidea.ideaownerconfig:
+  path: 'admin/config/content/idea_owner_config/config'
+  defaults:
+    _form: '\Drupal\ai_myidea\Form\IdeaOwnerSelectConfigForm'
+    _title: 'Idea Select Owner Configurations'
+  requirements:
+    _permission: 'administer Idea Owner'
+
+ai_myidea.regionowner:
+  path: 'admin/config/content/region_owner'
+  defaults:
+    _form: '\Drupal\ai_myidea\Form\Region\RegionOwnerForm'
+    _title: 'Idea Select Region Owner'
+  requirements:
+    _permission: 'administer Idea Owner'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+    
+ai_myidea.regiondelete:
+  path: 'admin/config/content/region_owner/{first}/regiondelete'
+  defaults:
+    _controller: '\Drupal\ai_myidea\Controller\IdeaChatController::deleteregion'
+  requirements:
+    _permission: 'administer Idea Owner'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+
+ai_myidea.industryowner:
+  path: 'admin/config/content/industry_owner'
+  defaults:
+    _form: '\Drupal\ai_myidea\Form\Industry\IndustryOwnerForm'
+    _title: 'Idea Select Industry Owner'
+  requirements:
+    _permission: 'administer Idea Owner'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+ai_myidea.delete:
+  path: 'admin/config/content/industry_owner/{first}/delete'
+  defaults:
+    _controller: '\Drupal\ai_myidea\Controller\IdeaChatController::deleteindustry'
+  requirements:
+    _permission: 'administer Idea Owner'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+    
+ai_myidea.domainowner:
+  path: 'admin/config/content/domain_owner'
+  defaults:
+    _form: '\Drupal\ai_myidea\Form\Domain\DomainOwnerForm'
+    _title: 'Idea Select Domain Owner'
+  requirements:
+    _permission: 'administer Idea Owner'
+    
+ai_myidea.domaindelete:
+  path: 'admin/config/content/domain_owner/{first}/domaindelete'
+  defaults:
+    _controller: '\Drupal\ai_myidea\Controller\IdeaChatController::deletedomain'
+  requirements:
+    _permission: 'administer Idea Owner'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'

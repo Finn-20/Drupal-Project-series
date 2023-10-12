@@ -1,0 +1,19 @@
+entity.node.ai_myideaform:
+  route_name: entity.node.ai_myidea
+  base_route: entity.node.canonical
+  title: 'IdeaChat'
+  
+ai_myidea.regionowner:
+  title: 'AI Region Owner'
+  route_name: ai_myidea.regionowner
+  base_route: ai_myidea.regionowner
+
+ai_myidea.industryowner:
+  title: 'AI Industry Owner'
+  route_name: ai_myidea.industryowner
+  base_route: ai_myidea.regionowner
+  
+ai_myidea.domainowner:
+  title: 'AI Domain Owner'
+  route_name: ai_myidea.domainowner
+  base_route: ai_myidea.regionowner

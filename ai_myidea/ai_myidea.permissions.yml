@@ -1,0 +1,16 @@
+view own ideachat:
+  title: View Own ideaChat
+  description: Access ideachat submitted by own.
+  restrict access: false
+view any ideachat:
+  title: View Any ideaChat
+  description: Access any ideachat submitted by any user.
+  restrict access: true
+administer ideachat:
+  title: Administer ideaChat
+  description: Access the ideaChat administration pages
+  restrict access: true
+administer Idea Owner:
+  title: Administer Idea Owner
+  description: Access the Idea Owner administration pages
+  restrict access: true

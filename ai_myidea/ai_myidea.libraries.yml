@@ -1,0 +1,8 @@
+ai_ideachat_page:
+  css:
+    theme:
+      css/ai_ideachat.css: {}
+  js:
+    js/ai_ideachat.js: {}
+  dependencies:
+    - core/jquery

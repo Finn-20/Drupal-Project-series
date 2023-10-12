@@ -1,0 +1,20 @@
+ai_myidea.config:
+  title: AI Idea Owners
+  route_name: ai_myidea.regionowner
+  parent: system.admin_config_content
+  expanded: TRUE
+
+ai_myidea.regionowner:
+  title: AI Region Owner 
+  route_name: ai_myidea.regionowner
+  parent: ai_myidea.config
+
+ai_myidea.industryowner:
+  title: AI Industry Owner 
+  route_name: ai_myidea.industryowner
+  parent: ai_myidea.config
+  
+ai_myidea.domainowner:
+  title: AI Domain Owner 
+  route_name: ai_myidea.domainowner
+  parent: ai_myidea.config

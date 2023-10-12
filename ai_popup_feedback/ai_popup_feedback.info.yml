@@ -1,0 +1,6 @@
+name: AI Gallery Custom Popup feedback Module
+description: Aigallery Custom Popup feedback Module
+package: Custom
+type: module
+version: 1.0
+core: 8.x

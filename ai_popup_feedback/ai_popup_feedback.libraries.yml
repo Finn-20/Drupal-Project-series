@@ -1,0 +1,7 @@
+# custom_reports:
+  # css:
+    # component:
+      # css/ai_custom_report.css: {}
+# display_collaterals:
+  # js:
+    # js/ai_custom_scripts.js: {}

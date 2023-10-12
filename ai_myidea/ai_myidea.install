@@ -1,0 +1,136 @@
+<?php
+
+/**
+ * @file
+ * Install file.
+ */
+
+use Drupal\Core\Database\Database;
+
+/**
+ * Implements hook_schema().
+ */
+function ai_myidea_schema() {
+  $schema = [
+	'region_owner_details' => [
+	  'fields' => [
+		'region_owner_id' => [
+		  'type' => 'serial',
+		  'not null' => TRUE,
+		],
+		'region_terms' => [
+		  'type' => 'text',
+		  'not null' => TRUE,
+		],
+		'region_author' => [
+		  'type' => 'text',
+		  'not null' => TRUE,
+		],
+	 ],
+	  'primary key' => ['region_owner_id'],
+	],
+	'industry_owner_details' => [
+	  'fields' => [
+		'industry_owner_id' => [
+		  'type' => 'serial',
+		  'not null' => TRUE,
+		],
+		'industry_terms' => [
+		  'type' => 'text',
+		  'not null' => TRUE,
+		],
+		'industry_author' => [
+		  'type' => 'text',
+		  'not null' => TRUE,
+		],
+	  ],
+	  'primary key' => ['industry_owner_id'],
+	],
+	'domain_owner_details' => [
+	  'fields' => [
+		'domain_owner_id' => [
+		  'type' => 'serial',
+		  'not null' => TRUE,
+		],
+		'domain_terms' => [
+		  'type' => 'text',
+		  'not null' => TRUE,
+		],
+		'domain_author' => [
+		  'type' => 'text',
+		  'not null' => TRUE,
+		],
+	  ],
+	  'primary key' => ['domain_owner_id'],
+	],
+    'ai_chat_answers' => [
+      'fields' => [
+        'answer_chat_id' => [
+          'type' => 'serial',
+          'not null' => TRUE,
+        ],
+        'chat_answer' => [
+          'type' => 'text',
+          'not null' => TRUE,
+        ],
+		'chat_answer_mode' => [
+          'type' => 'text',
+          'not null' => TRUE,
+        ],
+        'ref_nid' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'uid' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'timestamp' => [
+          'type' => 'int',
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'status' => [
+          'type' => 'int',
+          'description' => "Answer Status",
+          'not null' => TRUE,
+          'default' => 1,
+        ],
+      ],
+      'primary key' => ['answer_chat_id'],
+    ],
+  ];
+  return $schema;
+}
+
+/**
+ * Implements hook_update_N().
+ */
+ function ai_myidea_update_8001() {
+  $status = [
+    'type' => 'int',
+    'description' => "Answer Status",
+    'not null' => TRUE,
+    'default' => 1,
+  ];
+  $schema = Database::getConnection()->schema();
+  if (!db_field_exists('chat_answer', 'status')) {
+    $schema->addField('chat_answer', 'status', $status);
+  }
+} 
+
+/**
+ * Implements hook_update_N().
+ */
+ function ai_myidea_update_8002() {
+  // Create the definition for the field.
+  $new_field = [
+    'type' => 'text',
+    'not null' => TRUE,
+  ];
+
+  
+  db_change_field('ai_chat_answer', 'chat_answer', 'chat_answer', $new_field);
+} 

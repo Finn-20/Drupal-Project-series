@@ -1,0 +1,127 @@
+<?php
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Template\Attribute;
+use Drupal\media\MediaForm;
+use Drupal\node\Entity\Node;
+use Drupal\paragraphs\Entity\Paragraph;
+use Drupal\Component\Utility\Unicode;
+use Drupal\user\Entity\User;
+use Drupal\webform\WebformSubmissionInterface;
+use Drupal\webform\Entity\WebformSubmission;
+use Drupal\Core\Url;
+use Drupal\views\ViewExecutable;
+use Drupal\file\Entity\File;
+use Drupal\Core\Render\Element;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\editor\Entity\Editor;
+use Drupal\simple_popup_blocks\SimplePopupBlocksStorage;
+
+ function ai_popup_feedback_form_alter(array &$form, FormStateInterface $form_state, $form_id) { 
+	if( $form_id == 'simple_popup_blocks_add_form' || $form_id == 'simple_popup_blocks_edit_form'){
+		$feedback_pid = $form_state->get('simple_popup_blocks_id'); 
+		$feedbacktimeline_default = isset($feedback_pid) && !empty($feedback_pid) ? \Drupal::state()->get('feedback_timeline_' . $feedback_pid) : 0;
+		$spbpopup_feedback_settings = \Drupal::config('simple_popup_blocks.settings');
+		$days = [
+			0 => 'Select',
+			1 => '1 Day',
+			2 => '2 Day',
+			3 => '3 Day',
+			4 => '4 Day',
+			5 => '5 Day',
+			6 => '6 Day',
+			7 => '7 Day',
+			14 => '14 Days',
+			30 => '30 Days',
+		];
+		$form['type']['#weight'] = '0';
+		$form['block_list']['#weight'] = '1';
+		$form['custom_css']['#weight'] = '2';
+		$form['css_selector']['#weight'] = '3';
+		$form['layout']['#weight'] = '4';
+		$form['visit_counts']['#weight'] = '5';
+		$form['minimize']['#weight'] = '6';
+		$form['close']['#weight'] = '7';
+		$form['escape']['#weight'] = '8';
+		$form['overlay']['#weight'] = '9';
+		$form['trigger_method']['#weight'] = '10';
+		$form['delay']['#weight'] = '11';
+		$form['feedback_timeline'] = [
+		  '#type' => 'select',
+		  '#title' => t("Feedback Timeline"),
+		  '#options' => $days,
+		  '#weight' => 12,
+		  '#description' => 'Select the desired Feedback Timeline.',
+		  '#default_value' => $feedbacktimeline_default,
+		];
+		$form['trigger_selector']['#weight'] = '13';
+		$form['width']['#weight'] = '14';
+		$form['adjustments']['#weight'] = '15';
+		$form['submit']['#weight'] = '16';
+		$form['#submit'][] = '_ai_popup_feedback_submit';
+	}
+}
+
+function _ai_popup_feedback_submit(&$form, FormStateInterface $form_state) {
+	$values = $form_state->getValues();
+	$feedback_pid = $form_state->get('simple_popup_blocks_id'); 
+	\Drupal::state()->set('feedback_timeline_' . $feedback_pid,$values['feedback_timeline']);
+} 
+
+function ai_popup_feedback_js_alter(&$javascript) {
+	$javascript['modules/contrib/simple_popup_blocks/js/simple_popup_blocks.js']['data'] = drupal_get_path('module', 'ai_popup_feedback') . '/js/custom_feedbackpopup.js';
+}
+
+function ai_popup_feedback_js_settings_alter(array &$settings, \Drupal\Core\Asset\AttachedAssetsInterface $assets) {
+	$user = \Drupal::currentUser();
+	$simple_popup_exists = FALSE;
+	foreach ($assets->libraries as $library) {
+		if ($library == 'simple_popup_blocks/simple_popup_blocks') {
+			$simple_popup_exists = TRUE;
+		}
+	}
+
+	if($simple_popup_exists && isset($settings['simple_popup_blocks'])){		
+	  if (!$user->isAnonymous() ) {
+				$popup_display_settings = 0;
+				$query = \Drupal::database()->select('webform_submission', 'alias')
+					->fields('alias', ['webform_id', 'uid' ,'created'])
+					->condition('webform_id', 'customer_feedback' )
+					->condition('uid', $user->id());
+				$results = $query->execute();
+				$records = $results->fetchAll();
+				$num_results = count($records);
+				$temp_created = 0;
+				foreach ($records as $res){
+					$created = $res->created;
+					if ($res->created > $temp_created) {
+						$created = $res->created;
+					}
+				}
+
+				$entry_pid = 0;
+				$timeline = 0;
+				$timeline_found = FALSE;
+				foreach (SimplePopupBlocksStorage::loadAll() as $entry) {
+					if ($entry->status == 1 && !$timeline_found) {
+						if ($entry->type == 0 && $entry->identifier == 'feedbackform') {
+							$timeline = \Drupal::state()->get('feedback_timeline_' . $entry->pid);
+							$timeline_found = TRUE;
+							$entry_pid = $entry->pid;
+						}	
+					}
+				}
+
+				//Display the popup - if user is not submited based on the timeline.
+				$current_time = \Drupal::time()->getCurrentTime();
+				 //created - 1563255974-  created -1563259172 timeline =6
+				$timeline_timestamp = $timeline*24*60*60;
+				foreach ($settings['simple_popup_blocks']['settings'] as $id => $setting) {
+				  if ($created + $timeline_timestamp < $current_time && $setting['pid']->__toString() == $entry_pid) {
+					$popup_display_settings = 1;  
+				  }
+				  $settings['simple_popup_blocks']['settings'][$id]['display_popup'] = $popup_display_settings;
+				}
+			}
+		}
+}

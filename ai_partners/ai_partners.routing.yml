@@ -1,0 +1,15 @@
+ai_partners.partnersdetails:
+  path: 'partnersdetails'
+  defaults:
+    _controller: '\Drupal\ai_partners\Controller\AiPartnerController::termsContents'
+    _title: 'AI Partners'
+  requirements:
+    _permission: 'access content'
+
+ai_partners.glossarypartnersdetails:
+  path: 'partnersdetails/{glossary}'
+  defaults:
+    _controller: '\Drupal\ai_partners\Controller\AiPartnerController::termsContents'
+    _title: 'AI Partners'
+  requirements:
+    _permission: 'access content'

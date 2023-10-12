@@ -1,0 +1,5 @@
+services:
+    ai_popup_feedback_event_subscriber:
+        class: Drupal\ai_popup_feedback\EventSubscriber\AipopupfeedbackInteg
+        tags:
+            - {name: event_subscriber}
