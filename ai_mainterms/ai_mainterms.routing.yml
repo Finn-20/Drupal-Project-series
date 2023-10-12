@@ -1,0 +1,23 @@
+ai_mainterms.main-industries:
+  path: 'main-industries'
+  defaults:
+    _controller: '\Drupal\ai_mainterms\Controller\MainTermController::industryRelatedContent'
+    _title: 'Industry'
+  requirements:
+    _permission: 'access content'
+    
+ai_mainterms.main-domain:
+  path: 'main-domain'
+  defaults:
+    _controller: '\Drupal\ai_mainterms\Controller\MainTermController::DomainRelatedContent'
+    _title: 'Domain'
+  requirements:
+    _permission: 'access content'
+    
+ai_mainterms.main-offer:
+  path: 'main-offer'
+  defaults:
+    _controller: '\Drupal\ai_mainterms\Controller\MainTermController::OfferelatedContent'
+    _title: 'Offer'
+  requirements:
+    _permission: 'access content'

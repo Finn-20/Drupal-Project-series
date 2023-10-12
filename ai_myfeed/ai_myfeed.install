@@ -1,0 +1,41 @@
+<?php
+
+/**
+ * @file
+ * Install file.
+ */
+
+use Drupal\Core\Database\Database;
+
+
+
+/**
+ * Implements hook_update_N().
+ */
+function ai_myfeed_update_8002() {
+ $feedtab = [
+      'fields' => [
+        'myfeed_id' => [
+          'type' => 'serial',
+          'not null' => TRUE,
+        ],
+        'myfeed_uid' => [
+          'type' => 'int',
+          'unsigned' => TRUE,
+          'not null' => TRUE,
+          'default' => 0,
+        ],
+        'myfeed_termdata' => [
+           'type' => 'varchar',
+          'length' => 255,
+          'not null' => TRUE,
+          'default' => '',
+        ],
+      ],
+      'primary key' => ['myfeed_id'],
+    ];
+
+	$schema = Database::getConnection()->schema();
+	$schema->createTable('ai_myfeed_content', $feedtab);
+  
+}

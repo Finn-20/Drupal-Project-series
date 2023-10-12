@@ -1,0 +1,18 @@
+ai_myfeed.feedcategory:
+  path: '/feedcategory'
+  defaults:
+    _title: 'Add Feeds'
+    _form: '\Drupal\ai_myfeed\Form\AIMyfeedSearchForm'
+  requirements:
+    _permission: 'access content'
+  options:
+    _admin_route: TRUE   
+    no_cache: 'TRUE'
+
+ai_myfeed.searchmodal:
+  path: "/my-feed/search-modal"
+  defaults:
+    _controller: '\Drupal\ai_myfeed\Controller\MyFeedController::ai_my_feed_search_modal_form'
+    _title: "My Preferences"
+  requirements:
+    _permission: 'access content'

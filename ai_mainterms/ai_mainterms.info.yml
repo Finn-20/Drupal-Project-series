@@ -1,0 +1,6 @@
+name: Industry Main Page Custom
+description: Terms Main Page Custom Page.
+package: Custom
+type: module
+version: 1.0
+core: 8.x

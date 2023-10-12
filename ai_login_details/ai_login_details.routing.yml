@@ -1,0 +1,7 @@
+tracker.settings:
+  path: '/admin/config/login_tracker/settings'
+  defaults:
+    _form: '\Drupal\ai_login_details\Form\LoginSettingsForm'
+    _title: 'User Login Tracker Configuration'
+  requirements:
+    _permission: 'administer site configuration'

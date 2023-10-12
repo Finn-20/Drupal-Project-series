@@ -1,0 +1,27 @@
+{% for main_term in main_terms %}
+<div class="views-limit-grouping-group">
+<h3>{{ main_term.parent_name }}</h3>
+{% if main_term.offer_related_contents is not empty %}
+	<div class="ai_partners_grouping_2_content">
+		<div class="views-limit-grouping-group">
+			<div class="featured_content_wrapper">	
+				<div class="featured_use_cases">
+				  {% for offer_related_contents in main_term.offer_related_contents %}
+				  <div class="views-row views-row-0">
+					<div class="Detailed-page">
+				  {{ offer_related_contents }} 
+					  
+				  </div>
+				</div>
+				  {% endfor %}
+				  <span class="explore-all"> 
+				  {{ main_term.offer_explore_all }} </span>
+				 <div style="clear: both;"></div>	
+				</div>
+			</div>
+		</div>
+	</div>	
+{% endif %}
+
+</div>
+{% endfor %}

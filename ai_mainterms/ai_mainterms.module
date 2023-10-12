@@ -1,0 +1,41 @@
+<?php 
+use Drupal\Core\Form\FormStateInterface;
+use Drupal\Core\Template\Attribute;
+use Drupal\media\MediaForm;
+use Drupal\node\Entity\Node;
+use Drupal\paragraphs\Entity\Paragraph;
+use Drupal\Component\Utility\Unicode;
+use Drupal\webform\WebformSubmissionInterface;
+use Drupal\webform\Entity\WebformSubmission;
+use Drupal\Core\Url;
+use Drupal\file\Entity\File;
+use Drupal\Core\Render\Element;
+use Symfony\Component\HttpFoundation\RedirectResponse;
+use Drupal\Core\Entity\EntityInterface;
+use Drupal\Component\Render\PlainTextOutput;
+use Drupal\Component\Utility\Html;
+
+/**
+ * Implements hook_theme().
+ */
+function ai_mainterms_theme($existing, $type, $theme, $path) {
+  return [
+    'main_industry_detail_page' => [
+      'variables' => [
+	     'main_terms'=>NULL
+	  ],
+    ],
+	'main_domain_detail_page' => [
+      'variables' => [
+	     'main_terms'=>NULL
+	  ],
+    ],
+	'main_offer_detail_page' => [
+      'variables' => [
+	     'main_terms'=>NULL
+	  ],
+    ],
+  ];
+  
+ 
+}

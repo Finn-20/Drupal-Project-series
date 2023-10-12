@@ -1,0 +1,100 @@
+<?php
+
+/**
+ * @file
+ * The main module file.
+ *
+ * The module to log the login data, and to expose the module to views.
+ */
+
+/**
+ * Implements hook_user_login().
+ */
+function ai_login_details_user_login($account) {
+
+  $config = \Drupal::service('config.factory')->getEditable('ai_login_details.settings.tracker');
+  $set_value = $config->get('login_tracker');
+
+  // Get the user while login.
+  $login_uid = $account->id();
+
+  // Check if user has more than 5 login details.
+  $query = \Drupal::database()->select('login_details', 'login');
+  $query->addExpression('COUNT(*)');
+  $query->condition('uid', $login_uid, '=');
+  $query->range(0, 1);
+  $rows = $query->execute()->fetchAll();
+  $total_rows = $rows[0]->expression;
+
+  if ((int) $total_rows >= $set_value) {
+    // Get records for deletion.
+    $query = \Drupal::database()->select('login_details', 'login');
+    $query->fields('login', ['record_id']);
+    $query->condition('uid', $login_uid, '=');
+    $query->range(0, 50);
+    $rows = $query->execute()->fetchAll();
+    foreach ($rows as $value) {
+      $rec_value[] = (int) $value->record_id;
+    }
+    sort($rec_value);
+    $total_val = array_slice($rec_value, 0, count($rec_value) - 4, TRUE);
+    \Drupal::database()->delete('login_details')
+      ->condition('record_id', $total_val, 'in')
+      ->execute();
+  }
+  $request = \Drupal::request();
+  $current_user_ip = $request->getClientIP();
+  // Get last login details.
+  $query = \Drupal::database()->select('login_details', 'login');
+  $query->fields('login', ['hostname', 'login_timestamp']);
+  $query->orderBy('record_id', 'DESC');
+  $query->range(0, 1);
+  $user_record = $query->execute()->fetchAll();
+  // Get last host name.
+  $old_user_ip = $user_record[0]->hostname;
+  // Get last timestamp.
+  $old_timestamp = $user_record[0]->login_timestamp;
+  $last_login_time = gmdate("Y-m-d\TH:i:s\Z", $old_timestamp);
+  // Added 4 minutes in last timestamp.
+  $last_login = gmdate('Y-m-d\TH:i:s\Z', strtotime('+5 hours 33 minutes', strtotime($last_login_time)));
+  // Get current time.
+  $request_time = \Drupal::time()->getCurrentTime();
+  $current_time = gmdate("Y-m-d\TH:i:s\Z", $request_time);
+  $current_date_time = gmdate('Y-m-d\TH:i:s\Z', strtotime('+5 hours 30 minutes', strtotime($current_time)));
+
+  if (!($current_user_ip == $old_user_ip && $current_date_time < $last_login)) {
+
+    // Is this a one-time login?
+    if (\Drupal::routeMatch()->getRouteName() === 'user.reset') {
+      $one_time = 1;
+    }
+    else {
+      $one_time = 0;
+    }
+
+    // Limit user agent strings to 255 characters. For example, some versions of
+    // IE8 return long user agent strings causing an error upon login.
+    $user_agent = $request->server->get('HTTP_USER_AGENT');
+    if (strlen($user_agent) > 255) {
+      $user_agent = substr($user_agent, 0, 255);
+    }
+    $keys = [
+      'record_id' => NULL,
+    ];
+    $data = [];
+    $data = serialize($data);
+    $fields = [
+      'uid'             => $account->id(),
+      'login_timestamp' => REQUEST_TIME,
+      'hostname'        => $request->getClientIP(),
+      'one_time'        => $one_time,
+      'user_agent'      => $user_agent,
+      'data'            => empty($data) ? '' : $data,
+    ];
+
+    \Drupal::database()->merge('login_details')
+      ->key($keys)
+      ->fields($fields)
+      ->execute();
+  }
+}
